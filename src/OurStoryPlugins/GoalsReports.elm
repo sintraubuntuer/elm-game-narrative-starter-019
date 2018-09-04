@@ -1,7 +1,5 @@
 module OurStoryPlugins.GoalsReports exposing (LanguageId, generateGoalsStatusReport)
 
---import ClientTypes exposing (MultiOption, NarrativeFeedbackText(..))
-
 import Dict exposing (Dict)
 import Engine exposing (aDictStringListString, aDictStringString, astring, setAttributeValue)
 import Engine.Manifest as EngineManifest
@@ -17,7 +15,6 @@ generateGoalsStatusReport : List String -> List String -> List LanguageId -> Typ
 generateGoalsStatusReport questionIds optionIds llgIds extraInfo manifest =
     let
         questionStatusById qId =
-            --|> createAttributeIfNotExistsAndOrSetValue (Abool True) "isCorrectlyAnswered"
             EngineManifest.getAttributeByIdAndInteractableId "isCorrectlyAnswered" qId manifest
                 |> Tconverter.mbAttributeToMbBool True
                 |> (\( x, y ) -> ( Maybe.withDefault False x, y ))
@@ -47,7 +44,6 @@ generateGoalsStatusReport questionIds optionIds llgIds extraInfo manifest =
             List.map (\qId -> outputForQuestion qId lgId) questionIds
 
         optionStatusById oId =
-            --|> createAttributeIfNotExistsAndOrSetValue (Abool True) "isCorrectlyAnswered"
             EngineManifest.choiceHasAlreadyBeenMade oId manifest
 
         getOptionNamesDict : String -> Dict String String
