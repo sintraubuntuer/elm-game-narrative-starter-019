@@ -2,9 +2,87 @@
 <html lang="en-us">
   <head>
     <meta charSet="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Little Red Riding Hood - an interactive story</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1 , shrink-to-fit=yes" />
+
+     <link rel="stylesheet" type="text/css" href="Theme/styles/main.css" />
+     <link rel="stylesheet" type="text/css" href="Theme/styles/reset.css" />
+     <link rel="stylesheet" type="text/css" href="Theme/styles/story.css" />
+      <link rel="stylesheet" type="text/css" href="Theme/styles/github-markdown.css" />
+
+    <title>A Guided Tour through ... - An Interactive Story</title>
   </head>
-  <body class="">
+  <body>
+    <div id="outputArea">
+    </div>
+
   </body>
+
+  <!-- <script type="text/javascript" src="compiledjs/guidedTourVilaSassetti.js"></script> -->
+  <script type="text/javascript" src="dist/main.js"></script>
+  <script type="text/javascript">
+     var node1 = document.getElementById("outputArea") ;
+     //var elmApp = Elm.Main.embed( node1 , {   baseImgUrl : ""
+    //                                        , baseSoundUrl : "sound/"  }  );
+
+    var elmApp = Elm.Main.init({ node: document.getElementById('outputArea')
+                                  , flags : { "baseImgUrl" : ""
+                                              , "baseSoundUrl" : "sound/"
+                                            }
+                               }
+                               ) ;
+
+      var historyStr = "guidedTourVilaSassettiHistory"
+
+     elmApp.ports.saveHistoryToStorage.subscribe(function(history) {
+        localStorage.setItem( historyStr, JSON.stringify(history));
+    });
+
+    elmApp.ports.sendRequestForStoredHistory.subscribe(function(data) {
+       var storedState = localStorage.getItem( historyStr );
+       var storedHistory = storedState ? JSON.parse(storedState) : ( { "playerName" : "" ,  "lInteractions" : new Array() } ) ;
+       elmApp.ports.getHistoryFromStorage.send(storedHistory)
+   });
+
+     elmApp.ports.sendRequestForGeolocation.subscribe(function(interactableId) {
+         if (!navigator.geolocation){
+             console.log("Geolocation is not supported by your browser");
+             var failed_geolocation_info =   { "interactableId" : interactableId  , "latitude" : -999 ,  "longitude" : -999 }  ;
+
+             elmApp.ports.getGeolocationFromBrowser.send(failed_geolocation_info) ;
+             //return ;
+         }  else {
+
+             navigator.geolocation.getCurrentPosition(success, error);
+         }
+
+         function success(position) {
+             var latitude  = position.coords.latitude;
+             var longitude = position.coords.longitude;
+
+             var geolocation_info =   { "interactableId" : interactableId  , "latitude" : latitude ,  "longitude" : longitude }  ;
+             elmApp.ports.getGeolocationFromBrowser.send(geolocation_info) ;
+
+
+         }
+
+         function error() {
+             //output.innerHTML = "Unable to retrieve your location";
+             console.log("Unable to retrieve your location") ;
+         }
+     });
+
+
+
+
+
+
+
+
+
+
+
+  </script>
+
+
+
 </html>

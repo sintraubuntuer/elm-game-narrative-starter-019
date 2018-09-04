@@ -1,39 +1,75 @@
-module Theme.Inventory exposing (..)
+module Theme.Inventory exposing (view)
 
-import Html exposing (..)
-import Html.Keyed
-import Html.Attributes exposing (..)
-import Html.Events exposing (..)
 import ClientTypes exposing (..)
 import Components exposing (..)
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
+import Html.Keyed
+import TranslationHelper exposing (getInLanguage)
 import Tuple
 
 
 view :
     List Entity
+    -> String
+    -> Bool
     -> Html Msg
-view items =
+view items lgId bWithSidebar =
     let
         numItems =
             List.length items
 
+        inventoryItemClasses =
+            if bWithSidebar then
+                "Inventory__Item u-selectable"
+
+            else
+                "Inventory__Item__NoSidebar u-selectable"
+
+        elem =
+            if bWithSidebar then
+                li
+
+            else
+                span
+
         inventoryItem i entity =
             let
                 key =
-                    (toString <| Tuple.first entity) ++ (toString <| numItems - i)
+                    Tuple.first entity ++ (String.fromInt <| numItems - i)
             in
-                ( key
-                , li
-                    [ class "Inventory__Item u-selectable"
-                    , onClick <| Interact <| Tuple.first entity
-                    ]
-                    [ text <| .name <| getDisplayInfo entity ]
-                )
-    in
-        div [ class "Inventory" ]
-            [ h3 [] [ text "Inventory" ]
-            , div [ class "Inventory__list" ]
-                [ Html.Keyed.ol []
-                    (List.indexedMap inventoryItem items)
+            ( key
+            , elem
+                [ class inventoryItemClasses
+                , onClick <| Interact <| Tuple.first entity
                 ]
+                [ text <| .name <| getSingleLgDisplayInfo lgId entity ]
+            )
+
+        inventoryClass =
+            if bWithSidebar then
+                "Inventory"
+
+            else
+                "Inventory__NoSidebar"
+    in
+    div [ class inventoryClass ]
+        [ if bWithSidebar then
+            h3 [] [ text <| getInLanguage lgId "__Inventory__" ]
+
+          else
+            text ""
+        , div [ class "Inventory__list" ]
+            [ if bWithSidebar then
+                Html.Keyed.ol []
+                    (List.indexedMap inventoryItem items)
+
+              else
+                List.indexedMap inventoryItem items
+                    |> List.map Tuple.second
+                    |> List.intersperse (text " , ")
+                    |> (::) (text <| (getInLanguage lgId "__Inventory__" ++ " : "))
+                    |> p []
             ]
+        ]
