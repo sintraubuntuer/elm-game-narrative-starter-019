@@ -53,6 +53,7 @@ type alias Story =
     , playerId : String
     , rules : Rules
     , choiceLanguages : Dict String String -- key : LanguageId , val : language as string
+    , lprandomfloats : List Float
     , theEnd : Maybe The_End
     }
 
@@ -295,6 +296,7 @@ type ChangeWorldCommand
     | CheckAndActIfChosenOptionIs String CheckOptionData ID
     | ProcessChosenOptionEqualTo CheckOptionData ID
     | ExecuteCustomFunc (InteractionExtraInfo -> Manifest -> List ChangeWorldCommand) InteractionExtraInfo ID
+    | ExecuteCustomFuncUsingRandomElems (InteractionExtraInfo -> List Float -> Manifest -> List ChangeWorldCommand) InteractionExtraInfo (List Float) ID
 
 
 
@@ -310,6 +312,7 @@ type QuasiChangeWorldCommand
     | Write_GpsInfoToItem ID
     | Write_InputTextToItem ID
     | Execute_CustomFunc (InteractionExtraInfo -> Manifest -> List ChangeWorldCommand) ID
+    | Execute_CustomFuncUsingRandomElems Int (InteractionExtraInfo -> List Float -> Manifest -> List ChangeWorldCommand) ID
 
 
 type QuasiChangeWorldCommandWithBackendInfo

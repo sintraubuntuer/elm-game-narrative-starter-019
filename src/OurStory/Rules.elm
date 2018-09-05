@@ -78,6 +78,11 @@ startingState =
            )
 
 
+startingStateQuasiChanges : List Engine.QuasiChangeWorldCommand
+startingStateQuasiChanges =
+    [ execute_CustomFuncUsingRandomElems 5 (\einfo lfloats manifest -> [ setAttributeValue (astring "niceone") "typeOfPlayer" "playerOne" ]) "playerOne" ]
+
+
 moveQuestionsToStagesFixed : List Engine.ChangeWorldCommand
 moveQuestionsToStagesFixed =
     let
@@ -280,7 +285,7 @@ standardRuleMoveToNplusOneNotRestricted stageNr =
             else
                 getStageId stageNr
     in
-    rule ("interacting with Stage " ++ String.fromInt (stageNr + 1) ++ " from lower")
+    ruleWithQuasiChange ("interacting with Stage " ++ String.fromInt (stageNr + 1) ++ " from lower")
         { interaction = with (getStageId (stageNr + 1))
         , conditions =
             [ currentLocationIs currLocationId
@@ -290,6 +295,13 @@ standardRuleMoveToNplusOneNotRestricted stageNr =
             [ moveTo (getStageId (stageNr + 1))
             , moveCharacterToLocation "playerOne" (getStageId (stageNr + 1))
             ]
+        , quasiChanges =
+            if stageNr == 0 then
+                startingStateQuasiChanges
+
+            else
+                []
+        , quasiChangeWithBkend = noQuasiChangeWithBackend
         }
         (NarrativeDSFuncs.interactingWithStageNDict (stageNr + 1) "defaultStageDescription")
 

@@ -47,6 +47,7 @@ import ListZipper
 import OurStory.Manifest as Manifest
 import OurStory.Narrative as Narrative
 import OurStory.Rules as Rules
+import Random
 import Regex
 import SomeTests
 import Task
@@ -112,7 +113,7 @@ init flags =
         dictEntities =
             Rules.rules
 
-        ( engineModel, lincidents ) =
+        engineModel =
             Engine.init
                 { items = List.map (\( id, comp ) -> ( id, getInteractableInfo ( id, comp ) )) Manifest.items
                 , locations = List.map (\( id, comp ) -> ( id, getInteractableInfo ( id, comp ) )) Manifest.locations
@@ -121,7 +122,7 @@ init flags =
                 Manifest.playerId
                 Narrative.initialChoiceLanguages
                 (Dict.map (\a b -> getRuleData ( a, b )) dictEntities)
-                |> Engine.changeWorld Rules.startingState
+                []
 
         answerboxmodel =
             AnswerBox.init
@@ -131,12 +132,6 @@ init flags =
 
         displaylanguage =
             settingsmodel.displayLanguage
-
-        startLincidents =
-            [ ( "startingState ", lincidents ) ]
-
-        allPossibleIncidentsAboutCwcmds =
-            SomeTests.getAllPossibleIncidentsAboutCwcmds engineModel startLincidents
 
         debugMode_ =
             True
@@ -150,12 +145,7 @@ init flags =
       , answerBoxModel = answerboxmodel
       , settingsModel = settingsmodel
       , mbSentText = Nothing
-      , alertMessages =
-            if debugMode_ then
-                allPossibleIncidentsAboutCwcmds
-
-            else
-                []
+      , alertMessages = []
       , geoLocation = Nothing
       , geoDistances = []
       , defaultZoneRadius = 50.0
@@ -175,8 +165,46 @@ init flags =
       , displayEndScreen = False
       , endScreenInfo = Narrative.endScreenInfo
       }
-    , Cmd.none
+    , cmdForGeneratingListOfRandomFloats
+      --Cmd.none
     )
+
+
+cmdForGeneratingListOfRandomFloats : Cmd ClientTypes.Msg
+cmdForGeneratingListOfRandomFloats =
+    Random.generate NewRandomElemsAtGameStart (Random.list 1000 (Random.float 0 1))
+
+
+getNewModelAfterGameStartRandomElems : List Float -> Model -> Model
+getNewModelAfterGameStartRandomElems lfloats model =
+    let
+        engineModel_ =
+            Engine.setRandomFloatElems lfloats model.engineModel
+
+        ( newEngineModel, lincidents ) =
+            engineModel_
+                |> Engine.changeWorld Rules.startingState
+
+        startLincidents =
+            [ ( "startingState ", lincidents ) ]
+
+        allPossibleIncidentsAboutCwcmds =
+            SomeTests.getAllPossibleIncidentsAboutCwcmds newEngineModel startLincidents
+
+        alertMessages_ =
+            if model.debugMode then
+                allPossibleIncidentsAboutCwcmds
+
+            else
+                []
+
+        newModel =
+            { model
+                | engineModel = newEngineModel
+                , alertMessages = model.alertMessages ++ alertMessages_
+            }
+    in
+    newModel
 
 
 findEntity : Model -> String -> Entity
@@ -801,6 +829,9 @@ update msg model =
                       }
                     , Cmd.none
                     )
+
+                NewRandomElemsAtGameStart lfloats ->
+                    ( getNewModelAfterGameStartRandomElems lfloats model, Cmd.none )
 
                 NewUserSubmitedText theText ->
                     let

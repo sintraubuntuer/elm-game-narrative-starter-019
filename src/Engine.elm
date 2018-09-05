@@ -9,6 +9,7 @@ module Engine exposing
     ,  EndingType
       , EngUpdateMsg(..)
       , EngUpdateResponse(..)
+      , QuasiChangeWorldCommand
       , Rule_
       , aDictStringLSS
       , aDictStringListString
@@ -46,6 +47,7 @@ module Engine exposing
       , createCounterIfNotExists
       , createOrSetAttributeValueFromOtherInterAttr
       , execute_CustomFunc
+      , execute_CustomFuncUsingRandomElems
       , getChoiceLanguages
       , getHistory
       , getInteractableAttribute
@@ -78,6 +80,7 @@ module Engine exposing
       , removeAttributeIfExists
       , removeMultiChoiceOptions
       , setAttributeValue
+      , setRandomFloatElems
       , simpleCheck_IfAnswerCorrect
       , simpleCheck_IfAnswerCorrectUsingBackend
       , withAnyLocationAnyCharacterAfterGameEnded
@@ -201,8 +204,9 @@ init :
     -> String
     -> Dict.Dict String String
     -> Rules
+    -> List Float
     -> Model
-init itemsCharactersLocationsRecord playerId llanguages rules =
+init itemsCharactersLocationsRecord playerId llanguages rules lprandom_floats =
     Model
         { history = []
         , manifest = Engine.Manifest.init itemsCharactersLocationsRecord
@@ -211,8 +215,21 @@ init itemsCharactersLocationsRecord playerId llanguages rules =
         , currentScene = ""
         , currentLocation = ""
         , choiceLanguages = llanguages
+        , lprandomfloats = lprandom_floats
         , theEnd = Nothing
         }
+
+
+setRandomFloatElems : List Float -> Model -> Model
+setRandomFloatElems lfloats (Model story) =
+    let
+        _ =
+            Debug.log "now setting random elements " (List.head lfloats)
+
+        newStory =
+            { story | lprandomfloats = lfloats }
+    in
+    Model newStory
 
 
 {-| This gets the current scene to display
@@ -446,10 +463,18 @@ preUpdate interactableId extraInfo ((Model story) as model) =
                 Just quasicwcmd ->
                     determineIfInfoNeeded quasicwcmd
 
-        changesFromQuasi : List ChangeWorldCommand
-        changesFromQuasi =
-            lquasicwcmds
-                |> List.map (replaceQuasiCwCmdsWithCwcommands extraInfo)
+        --changesFromQuasi : ( List ChangeWorldCommand, List Float )
+        ( changesFromQuasi, newLfloats ) =
+            --lquasicwcmds
+            --|> List.map (replaceQuasiCwCmdsWithCwcommands extraInfo story.lprandomfloats)
+            List.foldl
+                (\qcwcmd tupAcc ->
+                    replaceQuasiCwCmdsWithCwcommands extraInfo (Tuple.second tupAcc) qcwcmd
+                        --|> concatResultTo tupAcc
+                        |> (\( cwcmd, lf ) -> ( List.append (Tuple.first tupAcc) [ cwcmd ], lf ))
+                )
+                ( [], story.lprandomfloats )
+                lquasicwcmds
 
         changes : List ChangeWorldCommand
         changes =
@@ -463,15 +488,18 @@ preUpdate interactableId extraInfo ((Model story) as model) =
         extraInfoWithPendingChangesNoBackend : Types.ExtraInfoWithPendingChanges
         extraInfoWithPendingChangesNoBackend =
             ExtraInfoWithPendingChanges newExtraInfo changes Nothing
+
+        newModel =
+            Model { story | lprandomfloats = newLfloats }
     in
     if infoNeeded /= NoInfoNeeded && extraInfo.bkAnsStatus == NoInfoYet && extraInfo.mbInputTextForBackend /= Nothing && (extraInfo.mbInputTextForBackend /= Just "") then
-        EnginePreResponse ( model, extraInfoWithPendingChanges, infoNeeded )
+        EnginePreResponse ( newModel, extraInfoWithPendingChanges, infoNeeded )
 
     else if infoNeeded /= NoInfoNeeded && extraInfo.bkAnsStatus == WaitingForInfoRequested then
-        EnginePreResponse ( model, ExtraInfoWithPendingChanges extraInfo [] Nothing, NoInfoNeeded )
+        EnginePreResponse ( newModel, ExtraInfoWithPendingChanges extraInfo [] Nothing, NoInfoNeeded )
 
     else
-        EnginePreResponse ( model, extraInfoWithPendingChangesNoBackend, NoInfoNeeded )
+        EnginePreResponse ( newModel, extraInfoWithPendingChangesNoBackend, NoInfoNeeded )
 
 
 completeTheUpdate :
@@ -529,26 +557,29 @@ replaceBkendQuasiCwCmdsWithCwcommands extraInfo quasiBkendCwCommand =
             replaceCheckIfAnswerCorrectUsingBackend extraInfo.bkAnsStatus strUrl cAnswerData interactableId
 
 
-replaceQuasiCwCmdsWithCwcommands : Types.InteractionExtraInfo -> QuasiChangeWorldCommand -> ChangeWorldCommand
-replaceQuasiCwCmdsWithCwcommands extraInfo quasiCwCommand =
+replaceQuasiCwCmdsWithCwcommands : Types.InteractionExtraInfo -> List Float -> QuasiChangeWorldCommand -> ( ChangeWorldCommand, List Float )
+replaceQuasiCwCmdsWithCwcommands extraInfo lfloats quasiCwCommand =
     case quasiCwCommand of
         NoQuasiChange ->
-            NoChange
+            ( NoChange, lfloats )
 
         Check_IfAnswerCorrect theCorrectAnswers cAnswerData interactableId ->
-            replaceCheckIfAnswerCorrect extraInfo.mbInputText theCorrectAnswers cAnswerData interactableId
+            ( replaceCheckIfAnswerCorrect extraInfo.mbInputText theCorrectAnswers cAnswerData interactableId, lfloats )
 
         CheckAndAct_IfChosenOptionIs cOptionData itemid ->
-            replaceCheckAndActIfChosenOptionIs extraInfo.mbInputText cOptionData itemid
+            ( replaceCheckAndActIfChosenOptionIs extraInfo.mbInputText cOptionData itemid, lfloats )
 
         Write_InputTextToItem interactableId ->
-            replaceWriteInputTextToItem extraInfo.mbInputText interactableId
+            ( replaceWriteInputTextToItem extraInfo.mbInputText interactableId, lfloats )
 
         Write_GpsInfoToItem interactableId ->
-            replaceWriteGpsInfoToItem extraInfo.geolocationInfoText interactableId
+            ( replaceWriteGpsInfoToItem extraInfo.geolocationInfoText interactableId, lfloats )
 
         Execute_CustomFunc func interactableId ->
-            replaceExecuteCustumFunc func extraInfo interactableId
+            ( replaceExecuteCustumFunc func extraInfo interactableId, lfloats )
+
+        Execute_CustomFuncUsingRandomElems nrRandomElems func interactableId ->
+            ( ExecuteCustomFuncUsingRandomElems func extraInfo (List.take nrRandomElems lfloats) interactableId, List.drop nrRandomElems lfloats )
 
 
 replaceExecuteCustumFunc : (InteractionExtraInfo -> Manifest -> List ChangeWorldCommand) -> InteractionExtraInfo -> String -> ChangeWorldCommand
@@ -692,6 +723,9 @@ changeWorld changes (Model story) =
                             Engine.Manifest.update change ( storyRecord.manifest, linteractionIncidents )
                     in
                     ( { storyRecord | manifest = newManifest }, newIncidents )
+
+        _ =
+            Debug.log "after Engine Update the number of elements of prandomfloats is : " (List.length story.lprandomfloats)
     in
     List.foldr (\chg y -> doChange chg y) ( story, [] ) changes
         |> (\( x, y ) -> ( Model x, y ))
@@ -1140,6 +1174,11 @@ removeAttributeIfExists =
 execute_CustomFunc : (InteractionExtraInfo -> Manifest -> List ChangeWorldCommand) -> ID -> QuasiChangeWorldCommand
 execute_CustomFunc =
     Execute_CustomFunc
+
+
+execute_CustomFuncUsingRandomElems : Int -> (InteractionExtraInfo -> List Float -> Manifest -> List ChangeWorldCommand) -> ID -> QuasiChangeWorldCommand
+execute_CustomFuncUsingRandomElems =
+    Execute_CustomFuncUsingRandomElems
 
 
 {-| Adds a character to a location, or moves a character to a different location (characters can only be in one location at a time, or off-screen). (Use moveTo to move yourself between locations.)

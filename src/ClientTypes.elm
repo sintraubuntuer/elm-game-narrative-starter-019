@@ -44,6 +44,7 @@ type Msg
     | ProcessLoadHistory (List ( String, InteractionExtraInfo )) SettingsModel
     | ExitToFinalScreen
     | Loaded
+    | NewRandomElemsAtGameStart (List Float)
 
 
 type alias SaveHistoryRecord =

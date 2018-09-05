@@ -502,6 +502,10 @@ update change ( manifest, linteractionincidents ) =
             func extraInfo manifest
                 |> List.foldl (\chg tup -> update chg tup) ( manifest, linteractionincidents )
 
+        ExecuteCustomFuncUsingRandomElems func extraInfo lfloats interactableId ->
+            func extraInfo lfloats manifest
+                |> List.foldl (\chg tup -> update chg tup) ( manifest, linteractionincidents )
+
         LoadScene str ->
             -- doesnt imply a change in the manifest. It is handled in Engine.changeWorld only
             ( manifest, linteractionincidents )
