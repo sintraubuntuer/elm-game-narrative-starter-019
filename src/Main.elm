@@ -612,6 +612,13 @@ update msg model =
                         ( mbsuggestInteractionId, incidentOnGetsuggestedInteraction ) =
                             getMbsuggestInteractionId
 
+                        suggestInteractionCaption : String -> String
+                        suggestInteractionCaption lgId =
+                            Engine.getInteractableAttribute "suggestedInteractionCaption" interactableId newEngineModel
+                                |> Tconverter.mbAttributeToDictStringString model.debugMode
+                                |> (\( x, y ) -> Dict.get lgId x)
+                                |> Maybe.withDefault (getInLanguage lgId "___SUGGESTED_INTERACTION___")
+
                         ( theNarratives, lincidentsOnNarratives ) =
                             let
                                 dict1Temp =
@@ -684,6 +691,7 @@ update msg model =
                                     |> Maybe.withDefault Dict.empty
                                     |> Dict.map (\lgId val -> { val | fileName = model.baseSoundUrl ++ val.fileName })
                             , mbSuggestedInteractionId = mbsuggestInteractionId
+                            , suggestedInteractionCaption = \lgId -> suggestInteractionCaption lgId
                             , suggestedInteractionNameDict =
                                 if mbsuggestInteractionId /= Nothing then
                                     findEntity model (Maybe.withDefault "" mbsuggestInteractionId) |> getDictLgNames Narrative.desiredLanguages
@@ -765,6 +773,7 @@ update msg model =
                                                             |> Maybe.withDefault ""
                                                   , mbAudio = Dict.get lgId nfti.audios
                                                   , mbSuggestedInteractionId = nfti.mbSuggestedInteractionId
+                                                  , suggestedInteractionCaption = nfti.suggestedInteractionCaption lgId
                                                   , mbSuggestedInteractionName = Dict.get lgId nfti.suggestedInteractionNameDict
                                                   , isLastInZipper =
                                                         Dict.get lgId nfti.narratives

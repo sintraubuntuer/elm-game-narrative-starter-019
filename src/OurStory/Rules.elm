@@ -24,6 +24,7 @@ import OurStory.NarrativeDSFuncs as NarrativeDSFuncs
         , getLastStageNr
         , getListOfStageIdWithQuestions
         , getListOfStageNrsWithQuestions
+        , getMultiOptionTextIfChosenDict
         , getNumberOfDesiredStages
         , getOptionId
         , getOptionIdsByStageNr
@@ -139,11 +140,28 @@ moveMultiOptionsToStagesFixed =
                     loptionIds
                         |> List.map (\id -> moveItemToLocationFixed id stageId)
 
+                --getResetPossibleOptionParam
                 cwcmds2 =
                     lIdAndNrs
-                        |> List.map (\( id, nr ) -> createAmultiChoice (NarrativeDSFuncs.getMultiOptionAvailableChoicesDict nr) id)
+                        |> List.concatMap
+                            (\( id, nr ) ->
+                                if NarrativeDSFuncs.getDisplayOptionButtonsOptionParam nr |> Maybe.withDefault True then
+                                    [ createAmultiChoice (NarrativeDSFuncs.getMultiOptionAvailableChoicesDict nr) id
+                                    , createAttributeIfNotExistsAndOrSetValue (abool True) "displayOptionButtons" id
+                                    ]
+
+                                else
+                                    [ makeItemWritable id
+                                    , createAttributeIfNotExistsAndOrSetValue (abool False) "displayOptionButtons" id
+                                    ]
+                            )
+
+                cwcmds3 =
+                    loptionIds
+                        |> List.map (\oid -> createAttributeIfNotExistsAndOrSetValue (aDictStringString Narrative.suggestedDeletedChoiceCaptionDict) "suggestedInteractionCaption" oid)
             in
             List.append cwcmds2 cwcmds1
+                |> List.append cwcmds3
     in
     getAllStageNrs
         |> List.filter (\x -> not (List.member x getQuestionsAndOrOptionsOnEveryStageExcept))
@@ -311,6 +329,7 @@ standardInteractionWithQuestionNr questionNr =
     let
         correctAnswers =
             NarrativeDSFuncs.getQuestionAnswers questionNr
+                |> (\ls -> listOfAnswersAndFunctions ls [])
 
         --stageNr = questionNr
     in
@@ -353,6 +372,7 @@ interactionWithQuestionNrAllQuestionsAndOptionsAnsweredButThisOne ( questionNr, 
     let
         correctAnswers =
             NarrativeDSFuncs.getQuestionAnswers questionNr
+                |> (\ls -> listOfAnswersAndFunctions ls [])
 
         lsuggestedInteractionIfLastStage =
             if stageNr == getLastStageNr then
@@ -378,7 +398,7 @@ interactionWithQuestionNrAllQuestionsAndOptionsAnsweredButThisOne ( questionNr, 
             []
         , quasiChanges =
             [ check_IfAnswerCorrect
-                (NarrativeDSFuncs.getQuestionAnswers questionNr)
+                correctAnswers
                 (checkAnswerData
                     (NarrativeDSFuncs.getQuestionsMaxNrTries questionNr)
                     caseInsensitiveAnswer
@@ -407,19 +427,27 @@ standardInteractionWithMultiOptionNr optionNr =
         optionId =
             getOptionId optionNr
 
+        matchStringValOrAny xstr =
+            if xstr == "{__ANY__}" then
+                matchAnyNonEmptyString
+
+            else
+                matchStringValue xstr
+
         allCheckAndActs =
-            List.map
-                (\x ->
-                    checkAndAct_IfChosenOptionIs
-                        (checkOptionData
-                            x
-                            Dict.empty
+            checkAndAct_IfChosenOptionIs
+                (List.map
+                    (\x ->
+                        checkOptionData
+                            (matchStringValOrAny x)
+                            (NarrativeDSFuncs.getMultiOptionTextIfChosenDict optionNr x)
                             []
                             []
-                        )
-                        optionId
+                            []
+                    )
+                    lpossibleChoices
                 )
-                lpossibleChoices
+                optionId
     in
     ruleWithQuasiChange ("view multi option" ++ String.fromInt optionNr)
         { interaction = with optionId
@@ -427,10 +455,36 @@ standardInteractionWithMultiOptionNr optionNr =
             []
         , changes = []
         , quasiChanges =
-            allCheckAndActs
+            [ allCheckAndActs ]
         , quasiChangeWithBkend = noQuasiChangeWithBackend
         }
         (NarrativeDSFuncs.interactingWithMultiOptionDict optionNr)
+
+
+standardInteractionWithMultiOptionNrReset : Int -> Entity
+standardInteractionWithMultiOptionNrReset optionNr =
+    let
+        optionId =
+            getOptionId optionNr
+
+        resetOptionId =
+            "reset_" ++ optionId
+    in
+    ruleWithQuasiChange ("view multi option reset " ++ String.fromInt optionNr)
+        { interaction = with resetOptionId
+        , conditions =
+            []
+        , changes =
+            [ resetOption optionId
+
+            --, --setAttributeValue (astring optionId) "suggestedInteraction" resetOptionId
+            , createAttributeIfNotExistsAndOrSetValue (astring optionId) "suggestedInteraction" resetOptionId
+            ]
+        , quasiChanges =
+            []
+        , quasiChangeWithBkend = noQuasiChangeWithBackend
+        }
+        (Narrative.interactingWithOptionResetDict optionNr)
 
 
 interactionWithOptionNrAllQuestionsAndOptionsAnsweredButThisOne : ( Int, Int ) -> Entity
@@ -455,19 +509,27 @@ interactionWithOptionNrAllQuestionsAndOptionsAnsweredButThisOne ( optionNr, stag
                 |> List.map getStageId
                 |> List.map (\x -> ( x, "additionalTextDict", aDictStringListString Narrative.additionalStageInfoAfterAllQuestionsAnsweredDict ))
 
+        matchStringValOrAny xstr =
+            if xstr == "{__ANY__}" then
+                matchAnyNonEmptyString
+
+            else
+                matchStringValue xstr
+
         allCheckAndActs =
-            List.map
-                (\x ->
-                    checkAndAct_IfChosenOptionIs
-                        (checkOptionData
-                            x
-                            Dict.empty
+            checkAndAct_IfChosenOptionIs
+                (List.map
+                    (\x ->
+                        checkOptionData
+                            (matchStringValOrAny x)
+                            (NarrativeDSFuncs.getMultiOptionTextIfChosenDict optionNr x)
                             ([ ( "warningMessage", aDictStringListString Narrative.goodNewsMessageAfterAllQuestionsAnsweredDict ) ] ++ lsuggestedInteractionIfLastStage)
                             additionalTextForStages
-                        )
-                        optionId
+                            []
+                    )
+                    lpossibleChoices
                 )
-                lpossibleChoices
+                optionId
     in
     ruleWithQuasiChange ("view option" ++ String.fromInt optionNr ++ " all options chosen but this one ")
         { interaction = with optionId
@@ -480,7 +542,7 @@ interactionWithOptionNrAllQuestionsAndOptionsAnsweredButThisOne ( optionNr, stag
         , changes =
             []
         , quasiChanges =
-            allCheckAndActs
+            [ allCheckAndActs ]
         , quasiChangeWithBkend = noQuasiChangeWithBackend
         }
         (NarrativeDSFuncs.interactingWithMultiOptionDict optionNr)
@@ -697,6 +759,13 @@ rules =
                 |> List.concat
                 |> List.map standardInteractionWithMultiOptionNr
 
+        lRulesAboutResettingMultiOptions =
+            getAllStageNrs
+                |> List.filter (\x -> not (List.member x getQuestionsAndOrOptionsOnEveryStageExcept))
+                |> List.map getOptionNrsByStageNr
+                |> List.concat
+                |> List.map standardInteractionWithMultiOptionNrReset
+
         lRulesAboutQuestionsAllQuestionsAndOptionsAnsweredButOne =
             getAllStageNrs
                 |> List.filter (\x -> not (List.member x getQuestionsAndOrOptionsOnEveryStageExcept))
@@ -719,6 +788,7 @@ rules =
                 |> List.append lRulesToMoveToNextStageNotRestricted
                 |> List.append lRulesAboutQuestions
                 |> List.append lRulesAboutMultiOptions
+                |> List.append lRulesAboutResettingMultiOptions
                 |> List.append lRulesInteractingWithGps
                 |> List.append lRulesInteractingWithCreditsInfo
                 |> List.append lRulesMakeFinalPaperAppearAfterAllQuestionsAnswered

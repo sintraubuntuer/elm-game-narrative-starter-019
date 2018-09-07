@@ -12,9 +12,11 @@ module Types exposing
     , CheckAnswerData
     , CheckBkendAnswerData
     , CheckOptionData
+    , ChoiceMatches(..)
     , Condition(..)
     , EndingType(..)
     , ExtraInfoWithPendingChanges
+    , FeedbackText(..)
     , Fixed
     , ID
     , Interactable(..)
@@ -28,6 +30,7 @@ module Types exposing
     , MoreInfoNeeded(..)
     , QuasiChangeWorldCommand(..)
     , QuasiChangeWorldCommandWithBackendInfo(..)
+    , QuestionAnswer(..)
     , Rule
     , Rule_
     , Rules
@@ -119,6 +122,7 @@ type alias ItemData =
     , isWritable : Bool
     , writtenContent : Maybe String
     , attributes : Dict String AttrTypes
+    , newCWCmds : List ChangeWorldCommand
     , interactionErrors : List String
     , interactionWarnings : List String
     }
@@ -128,6 +132,7 @@ type alias CharacterData =
     { interactableId : String
     , characterPlacement : CharacterPlacement
     , attributes : Dict String AttrTypes
+    , newCWCmds : List ChangeWorldCommand
     , interactionErrors : List String
     , interactionWarnings : List String
     }
@@ -137,6 +142,7 @@ type alias LocationData =
     { interactableId : String
     , shown : Bool
     , attributes : Dict String AttrTypes
+    , newCWCmds : List ChangeWorldCommand
     , interactionErrors : List String
     , interactionWarnings : List String
     }
@@ -276,7 +282,7 @@ type ChangeWorldCommand
     | WriteForceTextToItemFromGivenItemAttr String ID ID -- nameOfAttributeId GivenInteractableId InteractableId
     | WriteGpsLocInfoToItem String ID
     | ClearWrittenText ID
-    | CheckIfAnswerCorrect (List String) String CheckAnswerData ID
+    | CheckIfAnswerCorrect QuestionAnswer String CheckAnswerData ID
     | CreateCounterIfNotExists String ID --nameIdOfCounter InteractableID
     | CreateAttributeIfNotExists AttrTypes String (Maybe String) ID -- value nameOfAttributeId  InteractableID
     | SetAttributeValue AttrTypes String (Maybe String) ID
@@ -284,6 +290,7 @@ type ChangeWorldCommand
     | CreateOrSetAttributeValueFromOtherInterAttr String String ID ID -- nameOfAttributeId otherInteractableAttributeId otherInteractableId InteractableID
     | CreateAMultiChoice (Dict String (List ( String, String ))) ID
     | RemoveMultiChoiceOptions ID
+    | ResetOption ID
     | RemoveAttributeIfExists String ID
     | IncreaseCounter String ID
     | MoveItemOffScreen ID
@@ -293,13 +300,13 @@ type ChangeWorldCommand
     | SetChoiceLanguages (Dict String String)
     | AddChoiceLanguage String String -- lgId lgName
     | EndStory EndingType String
-    | CheckAndActIfChosenOptionIs String CheckOptionData ID
-    | ProcessChosenOptionEqualTo CheckOptionData ID
+    | CheckAndActIfChosenOptionIs String (List CheckOptionData) ID
     | ExecuteCustomFunc (InteractionExtraInfo -> Manifest -> List ChangeWorldCommand) InteractionExtraInfo ID
     | ExecuteCustomFuncUsingRandomElems (InteractionExtraInfo -> List Float -> Manifest -> List ChangeWorldCommand) InteractionExtraInfo (List Float) ID
 
 
 
+--| ProcessChosenOptionEqualTo CheckOptionData ID
 -- QuasiChangeWorldCommand have an underscore _ .  quasi cwcommmands  come from the config rules
 -- and are the  ones that wont reach Engine.Manifest because they
 -- will get replaced by ChangeWorldCommands -> the version with no underscore in Engine.update
@@ -307,8 +314,8 @@ type ChangeWorldCommand
 
 type QuasiChangeWorldCommand
     = NoQuasiChange
-    | Check_IfAnswerCorrect (List String) CheckAnswerData ID
-    | CheckAndAct_IfChosenOptionIs CheckOptionData ID
+    | Check_IfAnswerCorrect QuestionAnswer CheckAnswerData ID
+    | CheckAndAct_IfChosenOptionIs (List CheckOptionData) ID
     | Write_GpsInfoToItem ID
     | Write_InputTextToItem ID
     | Execute_CustomFunc (InteractionExtraInfo -> Manifest -> List ChangeWorldCommand) ID
@@ -320,12 +327,28 @@ type QuasiChangeWorldCommandWithBackendInfo
     | Check_IfAnswerCorrectUsingBackend String CheckBkendAnswerData ID
 
 
+type QuestionAnswer
+    = ListOfAnswersAndFunctions (List String) (List (String -> Manifest -> Bool))
+
+
 type alias CheckOptionData =
-    { valueToMatch : String
-    , successTextDict : Dict String (List String)
+    { choiceMatches : ChoiceMatches
+    , choiceFeedbackText : Dict String FeedbackText
     , lnewAttrs : List ( String, AttrTypes )
     , lotherInterAttrs : List ( String, String, AttrTypes )
+    , lnewCWcmds : List ChangeWorldCommand
     }
+
+
+type ChoiceMatches
+    = MatchStringValue String
+    | MatchAnyNonEmptyString
+
+
+type FeedbackText
+    = NoFeedbackText
+    | SimpleText (List String)
+    | FnEvalText (String -> Manifest -> List String)
 
 
 type alias CheckAnswerData =
@@ -333,8 +356,8 @@ type alias CheckAnswerData =
     , answerCase : AnswerCase
     , answerSpaces : AnswerSpaces
     , answerFeedback : AnswerFeedback
-    , correctAnsTextDict : Dict String (List String)
-    , incorrectAnsTextDict : Dict String (List String)
+    , correctAnsTextDict : Dict String FeedbackText
+    , incorrectAnsTextDict : Dict String FeedbackText
     , lnewAttrs : List ( String, AttrTypes )
     , lotherInterAttrs : List ( String, String, AttrTypes )
     }

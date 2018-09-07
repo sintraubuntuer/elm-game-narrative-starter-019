@@ -1,9 +1,8 @@
 module OurStory.NarrativeDSFuncs exposing
-    ( additionalTextIfAnswerCorrect
-    , additionalTextIfAnswerCorrectDict
-    , additionalTextIfAnswerIncorrect
+    ( additionalTextIfAnswerCorrectDict
     , additionalTextIfAnswerIncorrectDict
     , getAllStageNrs
+    , getDisplayOptionButtonsOptionParam
     , getFilteredStageMultiOptionIds
     , getFilteredStageMultiOptionNrs
     , getFilteredStageQuestionIds
@@ -17,6 +16,7 @@ module OurStory.NarrativeDSFuncs exposing
     , getMultiOptionBody
     , getMultiOptionBodyAsString
     , getMultiOptionName
+    , getMultiOptionTextIfChosenDict
     , getNumberOfDesiredStages
     , getOptionId
     , getOptionIdsByStageNr
@@ -33,6 +33,7 @@ module OurStory.NarrativeDSFuncs exposing
     , getQuestionNrsByStageNr
     , getQuestionsAndOrOptionsOnEveryStageExcept
     , getQuestionsMaxNrTries
+    , getResetPossibleOptionParam
     , getStageId
     , getStageName
     , getStageOptionIds
@@ -56,8 +57,10 @@ import OurStory.Narrative as Narrative exposing (desiredLanguages)
 import OurStory.NarrativeDataStructures as NarrativeDataStructures
     exposing
         ( LanguageId
+        , MultiOption
         , numberOfDesiredStages
         , questionsAndOrOptionsOnEveryStageExcept
+        , theMultiOptionParams
         , theMultiOptionsDict
         , theQuestionsDict
         , theStagesDict
@@ -287,34 +290,73 @@ interactingWithQuestion questionNr lgId =
     getQuestionBody questionNr lgId
 
 
-additionalTextIfAnswerCorrectDict : Int -> Dict String (List String)
+{-| additionalTextIfAnswerCorrectDict : Int -> Dict String (List String)
 additionalTextIfAnswerCorrectDict questionNr =
-    Dict.fromList
-        [ ( "pt", additionalTextIfAnswerCorrect questionNr "pt" )
-        , ( "en", additionalTextIfAnswerCorrect questionNr "en" )
-        ]
-
+Dict.fromList
+[ ( "pt", additionalTextIfAnswerCorrect questionNr "pt" )
+, ( "en", additionalTextIfAnswerCorrect questionNr "en" )
+]
 
 additionalTextIfAnswerCorrect : Int -> LanguageId -> List String
 additionalTextIfAnswerCorrect questionNr lgId =
-    Dict.get ( questionNr, lgId ) theQuestionsDict
-        |> Maybe.map .additionalTextIfCorrectAnswer
-        |> Maybe.withDefault [ "" ]
-
+Dict.get ( questionNr, lgId ) theQuestionsDict
+|> Maybe.map .additionalTextIfCorrectAnswer
+|> Maybe.withDefault [ "" ]
 
 additionalTextIfAnswerIncorrectDict : Int -> Dict String (List String)
 additionalTextIfAnswerIncorrectDict questionNr =
-    Dict.fromList
-        [ ( "pt", additionalTextIfAnswerIncorrect questionNr "pt" )
-        , ( "en", additionalTextIfAnswerIncorrect questionNr "en" )
-        ]
-
+Dict.fromList
+[ ( "pt", additionalTextIfAnswerIncorrect questionNr "pt" )
+, ( "en", additionalTextIfAnswerIncorrect questionNr "en" )
+]
 
 additionalTextIfAnswerIncorrect : Int -> LanguageId -> List String
 additionalTextIfAnswerIncorrect questionNr lgId =
-    Dict.get ( questionNr, lgId ) theQuestionsDict
-        |> Maybe.map .additionalTextIfIncorrectAnswer
-        |> Maybe.withDefault [ "" ]
+Dict.get ( questionNr, lgId ) theQuestionsDict
+|> Maybe.map .additionalTextIfIncorrectAnswer
+|> Maybe.withDefault [ "" ]
+
+-}
+additionalTextIfAnswerCorrectDict : Int -> Dict String Types.FeedbackText
+additionalTextIfAnswerCorrectDict questionNr =
+    let
+        getLgText : Int -> LanguageId -> Types.FeedbackText
+        getLgText theNr lgId =
+            Dict.get ( theNr, lgId ) NarrativeDataStructures.theQuestionsDict
+                |> Maybe.map .additionalTextIfCorrectAnswer
+                |> getLgTextHelper
+
+        textOrFnDict : Dict String Types.FeedbackText
+        textOrFnDict =
+            List.foldl (\lgId d -> Dict.insert lgId (getLgText questionNr lgId) d) Dict.empty Narrative.desiredLanguages
+    in
+    textOrFnDict
+
+
+getLgTextHelper : Maybe Types.FeedbackText -> Types.FeedbackText
+getLgTextHelper mbftext =
+    case mbftext of
+        Nothing ->
+            Types.NoFeedbackText
+
+        Just s ->
+            s
+
+
+additionalTextIfAnswerIncorrectDict : Int -> Dict String Types.FeedbackText
+additionalTextIfAnswerIncorrectDict questionNr =
+    let
+        getLgText : Int -> LanguageId -> Types.FeedbackText
+        getLgText theNr lgId =
+            Dict.get ( theNr, lgId ) NarrativeDataStructures.theQuestionsDict
+                |> Maybe.map .additionalTextIfIncorrectAnswer
+                |> getLgTextHelper
+
+        textOrFnDict : Dict String Types.FeedbackText
+        textOrFnDict =
+            List.foldl (\lgId d -> Dict.insert lgId (getLgText questionNr lgId) d) Dict.empty Narrative.desiredLanguages
+    in
+    textOrFnDict
 
 
 getQuestionsMaxNrTries : Int -> Maybe Int
@@ -393,13 +435,43 @@ getMultiOptionAvailableChoicesDict nr =
                                 []
 
                             Just lopt ->
-                                lopt
+                                List.map (\( k, v, stext ) -> ( k, v )) lopt
                    )
 
         availableChoicesDict =
             List.foldl (\lgId d -> Dict.insert lgId (getLgOptions nr lgId optionDict) d) Dict.empty desiredLanguages
     in
     availableChoicesDict
+
+
+getMultiOptionTextIfChosenDict : Int -> String -> Dict String Types.FeedbackText
+getMultiOptionTextIfChosenDict optionNr optKey =
+    let
+        optionDict : Dict ( Int, LanguageId ) MultiOption
+        optionDict =
+            NarrativeDataStructures.theMultiOptionsDict
+
+        getLgText : Int -> LanguageId -> Dict ( Int, LanguageId ) MultiOption -> Types.FeedbackText
+        getLgText theNr lgId optDict =
+            Dict.get ( theNr, lgId ) optDict
+                |> Maybe.map .availableChoices
+                |> (\x ->
+                        case x of
+                            Nothing ->
+                                Types.NoFeedbackText
+
+                            Just lopt ->
+                                List.filter (\( k, v, cfeedback ) -> k == optKey || k == "{__ANY__}") lopt
+                                    |> List.map (\( k, v, cfeedback ) -> cfeedback)
+                                    |> List.head
+                                    |> Maybe.withDefault Types.NoFeedbackText
+                   )
+
+        textOrFnDict : Dict String Types.FeedbackText
+        textOrFnDict =
+            List.foldl (\lgId d -> Dict.insert lgId (getLgText optionNr lgId optionDict) d) Dict.empty Narrative.desiredLanguages
+    in
+    textOrFnDict
 
 
 getMultiOptionAvailableChoicesValList : Int -> List String
@@ -417,7 +489,7 @@ getMultiOptionAvailableChoicesValList nr =
                                 []
 
                             Just lopt ->
-                                List.map Tuple.first lopt
+                                List.map (\( k, v, stext ) -> k) lopt
                    )
 
         availableChoicesValList =
@@ -595,3 +667,13 @@ getListOfStageNrsWithQuestions : List Int
 getListOfStageNrsWithQuestions =
     getAllStageNrs
         |> List.filter (\x -> not (List.member x getQuestionsAndOrOptionsOnEveryStageExcept))
+
+
+getDisplayOptionButtonsOptionParam optionNr =
+    Dict.get optionNr theMultiOptionParams
+        |> Maybe.map (\x -> x.displayOptionButtons)
+
+
+getResetPossibleOptionParam optionNr =
+    Dict.get optionNr theMultiOptionParams
+        |> Maybe.map (\x -> x.resetPossible)

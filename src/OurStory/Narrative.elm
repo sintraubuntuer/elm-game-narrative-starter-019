@@ -15,6 +15,7 @@ module OurStory.Narrative exposing
     , interactingWithFinalPaperDict
     , interactingWithFinalPaperEn
     , interactingWithFinalPaperPt
+    , interactingWithOptionResetDict
     , interactingWithPlayerOne
     , interactingWithPlayerOneDict
     , interactingWithPlayerOneEn
@@ -25,6 +26,7 @@ module OurStory.Narrative exposing
     , startingNarrative
     , startingNarrativeEn
     , startingNarratives
+    , suggestedDeletedChoiceCaptionDict
     , takeGps
     , takeGpsDict
     , takeGpsEn
@@ -117,6 +119,7 @@ startingNarrative =
          """
     , mbAudio = Nothing
     , mbSuggestedInteractionId = Nothing
+    , suggestedInteractionCaption = "interacção sugerida : "
     , mbSuggestedInteractionName = Nothing
     , isLastInZipper = True
     }
@@ -134,6 +137,7 @@ startingNarrativeEn =
        """
     , mbAudio = Nothing
     , mbSuggestedInteractionId = Nothing
+    , suggestedInteractionCaption = "suggested interaction : "
     , mbSuggestedInteractionName = Nothing
     , isLastInZipper = True
     }
@@ -167,6 +171,14 @@ type alias LanguageId =
     String
 
 
+suggestedDeletedChoiceCaptionDict : Dict String String
+suggestedDeletedChoiceCaptionDict =
+    Dict.fromList
+        [ ( "pt", "alterar escolha : " )
+        , ( "en", "alter choice : " )
+        ]
+
+
 additionalStageInfoAfterQuestionAnsweredDict : Dict String (List String)
 additionalStageInfoAfterQuestionAnsweredDict =
     Dict.fromList
@@ -181,6 +193,24 @@ additionalStageInfoAfterAllQuestionsAnsweredDict =
         [ ( "pt", [ "Todas as questões foram respondidas. Dirige-te para o ultimo nivel ... " ] )
         , ( "en", [ "All questions have been answered. Now move to the last stage ... " ] )
         ]
+
+
+interactingWithOptionResetDict : Int -> Dict String (List String)
+interactingWithOptionResetDict optionNr =
+    Dict.fromList
+        [ ( "pt", interactingWithOptionResetPt optionNr )
+        , ( "en", interactingWithOptionResetEn optionNr )
+        ]
+
+
+interactingWithOptionResetPt : Int -> List String
+interactingWithOptionResetPt optionNr =
+    [ "A opcao seleccionada foi eliminada. Pode agora fazer nova escolha" ]
+
+
+interactingWithOptionResetEn : Int -> List String
+interactingWithOptionResetEn optionNr =
+    [ "The previous choice was deleted. You can now make a new choice " ]
 
 
 takeGpsDict : Dict String (List String)

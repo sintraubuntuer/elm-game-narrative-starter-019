@@ -74,7 +74,7 @@ item ( itemId, dictItemInfo ) =
     let
         --ItemData  interactableId fixed  itemPlacement  isWritable  writtenContent  attributes  interactionErrors interactionWarnings
         itemData =
-            ItemData itemId False ItemOffScreen False Nothing dictItemInfo [] []
+            ItemData itemId False ItemOffScreen False Nothing dictItemInfo [] [] []
     in
     Item itemData
 
@@ -84,7 +84,7 @@ location ( locationId, dictLocationInfo ) =
     let
         --  LocationData interactableId  shown    attributes  interactionErrors interactionWarnings
         locationData =
-            LocationData locationId False dictLocationInfo [] []
+            LocationData locationId False dictLocationInfo [] [] []
     in
     Location locationData
 
@@ -94,7 +94,7 @@ character ( characterId, dictCharacterInfo ) =
     let
         --  CharacterData  interactableId  characterPlacement  attributes   interactionErrors  interactionWarnings
         characterData =
-            CharacterData characterId CharacterOffScreen dictCharacterInfo [] []
+            CharacterData characterId CharacterOffScreen dictCharacterInfo [] [] []
     in
     Character characterData
 
@@ -449,15 +449,18 @@ update change ( manifest, linteractionincidents ) =
             manifestUpdate id clearWrittenText ( manifest, linteractionincidents )
 
         CheckIfAnswerCorrect theText playerAnswer cAnswerData interactableId ->
-            manifestUpdate interactableId (checkIfAnswerCorrect theText playerAnswer cAnswerData) ( manifest, linteractionincidents )
+            manifestUpdate interactableId (checkIfAnswerCorrect theText playerAnswer cAnswerData manifest) ( manifest, linteractionincidents )
                 |> processCreateOrSetOtherInteractableAttributesIfAnswerCorrect cAnswerData.lotherInterAttrs interactableId
 
-        CheckAndActIfChosenOptionIs playerChoice cOptionData interactableId ->
-            manifestUpdate interactableId (checkAndActIfChosenOptionIs playerChoice cOptionData) ( manifest, linteractionincidents )
-                |> processCreateOrSetOtherInteractableAttributesIfChosenOptionIs playerChoice cOptionData.valueToMatch cOptionData.lotherInterAttrs interactableId
+        CheckAndActIfChosenOptionIs playerChoice lcOptionData interactableId ->
+            manifestUpdate interactableId (checkAndActIfChosenOptionIs playerChoice lcOptionData interactableId manifest) ( manifest, linteractionincidents )
+                --|> processCreateOrSetOtherInteractableAttributesIfChosenOptionIs playerChoice cOptionData.valueToMatch cOptionData.lotherInterAttrs interactableId
+                |> processNewChangeWorldCommands interactableId
 
-        ProcessChosenOptionEqualTo cOptionData id ->
-            manifestUpdate id (processChosenOptionEqualTo cOptionData) ( manifest, linteractionincidents )
+        --ProcessChosenOptionEqualTo cOptionData id ->
+        --    manifestUpdate id (processChosenOptionEqualTo cOptionData manifest) ( manifest, linteractionincidents )
+        ResetOption interactableId ->
+            manifestUpdate interactableId resetOption ( manifest, linteractionincidents )
 
         CreateAMultiChoice dslss id ->
             manifestUpdate id (createAmultiChoice dslss) ( manifest, linteractionincidents )
@@ -526,7 +529,23 @@ update change ( manifest, linteractionincidents ) =
 createAmultiChoice : Dict String (List ( String, String )) -> Maybe Interactable -> Maybe Interactable
 createAmultiChoice dslss mbInteractable =
     createAttributeIfNotExistsAndOrSetValue (ADictStringLSS dslss) "answerOptionsList" (Just "internal") mbInteractable
+        |> createAttributeIfNotExistsAndOrSetValue (ADictStringLSS dslss) "answerOptionsListBackup" (Just "internal")
         |> removeAttributeIfExists "chosenOption"
+
+
+reactivateMultiChoiceFromBackup : Maybe Interactable -> Maybe Interactable
+reactivateMultiChoiceFromBackup mbInteractable =
+    let
+        mbAnsOptList =
+            getInteractableAttribute "answerOptionsListBackup" mbInteractable
+    in
+    case mbAnsOptList of
+        Just ansOptList ->
+            createAttributeIfNotExistsAndOrSetValue ansOptList "answerOptionsList" (Just "internal") mbInteractable
+                |> removeAttributeIfExists "chosenOption"
+
+        Nothing ->
+            mbInteractable
 
 
 removeMultiChoiceOptions : Maybe Interactable -> Maybe Interactable
@@ -552,6 +571,25 @@ processCreateOrSetOtherInteractableAttributesIfChosenOptionIs playerChoice valTo
 
     else
         ( manifest, linteractionincidents )
+
+
+processNewChangeWorldCommands : String -> ( Manifest, List String ) -> ( Manifest, List String )
+processNewChangeWorldCommands interactableId ( manifest, linteractionincidents ) =
+    case Dict.get interactableId manifest of
+        Just (Item idata) ->
+            List.foldl (\chg tup -> update chg tup) ( manifest, linteractionincidents ) idata.newCWCmds
+                |> manifestUpdate interactableId clearNextChangeWorldCommandsToBeExecuted
+
+        Just (Character cdata) ->
+            List.foldl (\chg tup -> update chg tup) ( manifest, linteractionincidents ) cdata.newCWCmds
+                |> manifestUpdate interactableId clearNextChangeWorldCommandsToBeExecuted
+
+        Just (Location ldata) ->
+            List.foldl (\chg tup -> update chg tup) ( manifest, linteractionincidents ) ldata.newCWCmds
+                |> manifestUpdate interactableId clearNextChangeWorldCommandsToBeExecuted
+
+        Nothing ->
+            ( manifest, linteractionincidents )
 
 
 getInteractionErrors : String -> Manifest -> List String
@@ -1006,8 +1044,8 @@ getItemWrittenContent mbInteractable =
             Nothing
 
 
-checkIfAnswerCorrect : List String -> String -> CheckAnswerData -> Maybe Interactable -> Maybe Interactable
-checkIfAnswerCorrect theCorrectAnswers playerAnswer checkAnsData mbinteractable =
+checkIfAnswerCorrect : QuestionAnswer -> String -> CheckAnswerData -> Manifest -> Maybe Interactable -> Maybe Interactable
+checkIfAnswerCorrect questionAns playerAnswer checkAnsData manifest mbinteractable =
     case mbinteractable of
         Just (Item idata) ->
             let
@@ -1084,6 +1122,22 @@ checkIfAnswerCorrect theCorrectAnswers playerAnswer checkAnsData mbinteractable 
                     else
                         mbinter
 
+                ( theCorrectAnswers, bEval ) =
+                    case questionAns of
+                        ListOfAnswersAndFunctions lstrs lfns ->
+                            ( lstrs
+                            , List.map (\fn -> fn playerAnswer manifest) lfns
+                                |> List.foldl (\b1 b2 -> b1 || b2) False
+                            )
+
+                thesuccessTextDict =
+                    generateFeedbackTextDict checkAnsData.correctAnsTextDict playerAnswer manifest
+
+                theInsuccessTextDict =
+                    generateFeedbackTextDict checkAnsData.incorrectAnsTextDict playerAnswer manifest
+
+                --otherInterAttribsRelatedCWcmds =
+                --    List.foldl (\( otherInterId, attrId, attrValue ) y -> CreateAttributeIfNotExistsAndOrSetValue attrValue attrId otherInterId :: y) [] checkAnsData.lotherInterAttrs
                 theMbInteractable =
                     if maxNrTries > 0 && nrTries >= maxNrTries then
                         mbinteractable
@@ -1098,14 +1152,14 @@ checkIfAnswerCorrect theCorrectAnswers playerAnswer checkAnsData mbinteractable 
                         mbinteractable
                         -- if no answer was provided or correct answer was previously provided returns the exact same maybe interactable
 
-                    else if comparesEqualToAtLeastOne playerAnswer theCorrectAnswers checkAnsData.answerCase checkAnsData.answerSpaces then
+                    else if (List.length theCorrectAnswers > 0 && comparesEqualToAtLeastOne playerAnswer theCorrectAnswers checkAnsData.answerCase checkAnsData.answerSpaces) || bEval then
                         Just (Item { idata | writtenContent = Just ansRight })
                             |> makeItUnanswerable
                             |> createAttributeIfNotExistsAndOrSetValue (Astring playerAnswer) "playerAnswer" (Just "internal")
                             |> createAttributeIfNotExistsAndOrSetValue (Abool True) "isCorrectlyAnswered" (Just "internal")
                             |> removeAttributeIfExists "isIncorrectlyAnswered"
                             |> createAttributeIfNotExistsAndOrSetValue (Astring "___QUESTION_ANSWERED___") "narrativeHeader" (Just "internal")
-                            |> createAttributeIfNotExistsAndOrSetValue (ADictStringListString checkAnsData.correctAnsTextDict) "additionalTextDict" (Just "internal")
+                            |> createAttributeIfNotExistsAndOrSetValue (ADictStringListString thesuccessTextDict) "additionalTextDict" (Just "internal")
                             |> createAttributesIfNotExistsAndOrSetValue checkAnsData.lnewAttrs
 
                     else
@@ -1113,7 +1167,7 @@ checkIfAnswerCorrect theCorrectAnswers playerAnswer checkAnsData mbinteractable 
                             |> createAttributeIfNotExistsAndOrSetValue (Astring playerAnswer) "playerAnswer" (Just "internal")
                             |> createAttributeIfNotExistsAndOrSetValue (Abool True) "isIncorrectlyAnswered" (Just "internal")
                             |> removeAttributeIfExists "isCorrectlyAnswered"
-                            |> createAttributeIfNotExistsAndOrSetValue (ADictStringListString checkAnsData.incorrectAnsTextDict) "additionalTextDict" (Just "internal")
+                            |> createAttributeIfNotExistsAndOrSetValue (ADictStringListString theInsuccessTextDict) "additionalTextDict" (Just "internal")
                             |> createCounterIfNotExists "nrIncorrectAnswers"
                             |> makeItUnanswarableIfReachedMaxTries (maxNrTries - 1)
                             |> increaseCounter "nrIncorrectAnswers"
@@ -1128,16 +1182,68 @@ checkIfAnswerCorrect theCorrectAnswers playerAnswer checkAnsData mbinteractable 
                 |> writeInteractionIncident "error" "Trying to use checkIfAnswerCorrect function with an interactable that is not an Item ! "
 
 
-checkAndActIfChosenOptionIs : String -> CheckOptionData -> Maybe Interactable -> Maybe Interactable
-checkAndActIfChosenOptionIs playerChoice cOptionData mbinteractable =
+generateFeedbackTextDict : Dict String FeedbackText -> String -> Manifest -> Dict String (List String)
+generateFeedbackTextDict dcf answerOrChoice manifest =
+    let
+        fnFeedbackText : String -> FeedbackText -> List String
+        fnFeedbackText lgId choiceFeedback =
+            case choiceFeedback of
+                NoFeedbackText ->
+                    []
+
+                SimpleText ls ->
+                    ls
+
+                FnEvalText fn ->
+                    let
+                        afterFunc =
+                            fn answerOrChoice manifest
+                    in
+                    afterFunc
+
+        dAfterFunc =
+            Dict.map (\lgId cf -> fnFeedbackText lgId cf) dcf
+    in
+    dAfterFunc
+
+
+checkAndActIfChosenOptionIs : String -> List CheckOptionData -> String -> Manifest -> Maybe Interactable -> Maybe Interactable
+checkAndActIfChosenOptionIs playerChoice lcOptionData optionId manifest mbinteractable =
     case mbinteractable of
         Just (Item idata) ->
             let
                 choiceStr =
                     "  \n ___YOUR_CHOICE___" ++ " " ++ playerChoice
 
+                choiceComparesEqualToValToMatch choiceMatches =
+                    case choiceMatches of
+                        MatchStringValue strToMatch ->
+                            if playerChoice == strToMatch then
+                                True
+
+                            else
+                                False
+
+                        MatchAnyNonEmptyString ->
+                            if playerChoice /= "" then
+                                True
+
+                            else
+                                False
+
+                mbFindMatched =
+                    List.filter (\x -> choiceComparesEqualToValToMatch x.choiceMatches) lcOptionData
+                        |> List.head
+
+                resetOptionId =
+                    "reset_" ++ optionId
+
                 theMbInteractable =
-                    if
+                    if playerChoice == "" && Dict.get "chosenOption" idata.attributes == Nothing then
+                        mbinteractable
+                            |> removeAttributeIfExists "suggestedInteraction"
+
+                    else if
                         playerChoice
                             == ""
                             || Dict.get "chosenOption" idata.attributes
@@ -1147,12 +1253,28 @@ checkAndActIfChosenOptionIs playerChoice cOptionData mbinteractable =
                         -- if no choice or it was already chosen before it doesnt check
                         -- and doesnt make any alteration
 
-                    else if playerChoice == cOptionData.valueToMatch then
-                        Just (Item { idata | writtenContent = Just choiceStr })
-                            |> createAttributeIfNotExistsAndOrSetValue (Astring playerChoice) "chosenOption" (Just "internal")
-                            |> createAttributeIfNotExistsAndOrSetValue (ADictStringListString cOptionData.successTextDict) "additionalTextDict" (Just "internal")
-                            |> createAttributesIfNotExistsAndOrSetValue cOptionData.lnewAttrs
-                            |> removeAttributeIfExists "answerOptionsList"
+                    else if mbFindMatched /= Nothing then
+                        case mbFindMatched of
+                            Just cOptionData ->
+                                let
+                                    theTextDict =
+                                        generateFeedbackTextDict cOptionData.choiceFeedbackText playerChoice manifest
+
+                                    otherInterAttribsRelatedCWcmds =
+                                        List.foldl (\( otherInterId, attrId, attrValue ) y -> CreateAttributeIfNotExistsAndOrSetValue attrValue attrId (Just "internal") otherInterId :: y) [] cOptionData.lotherInterAttrs
+                                in
+                                Just (Item { idata | writtenContent = Just choiceStr })
+                                    |> createAttributeIfNotExistsAndOrSetValue (Astring playerChoice) "chosenOption" (Just "internal")
+                                    |> createAttributeIfNotExistsAndOrSetValue (ADictStringListString theTextDict) "additionalTextDict" (Just "internal")
+                                    |> createAttributesIfNotExistsAndOrSetValue cOptionData.lnewAttrs
+                                    |> setNextChangeWorldCommandsToBeExecuted (List.append cOptionData.lnewCWcmds otherInterAttribsRelatedCWcmds)
+                                    |> removeAttributeIfExists "answerOptionsList"
+                                    |> makeItemUnwritable
+                                    |> createAttributeIfNotExistsAndOrSetValue (Astring resetOptionId) "suggestedInteraction" (Just "internal")
+
+                            --|> setAttributeValue (aDictStringString Narrative.suggestedDeletedChoiceCaptionDict) "suggestedInteractionCaption" (Just "internal")
+                            Nothing ->
+                                mbinteractable
 
                     else
                         mbinteractable
@@ -1167,13 +1289,39 @@ checkAndActIfChosenOptionIs playerChoice cOptionData mbinteractable =
                 |> writeInteractionIncident "error" "Trying to use checkIfAnswerCorrect function with an interactable that is not an Item ! "
 
 
+resetOption : Maybe Interactable -> Maybe Interactable
+resetOption mbinteractable =
+    case mbinteractable of
+        Just (Item idata) ->
+            Just (Item { idata | writtenContent = Nothing })
+                |> removeAttributeIfExists "chosenOption"
+                |> removeAttributeIfExists "additionalTextDict"
+                |> (\mbint ->
+                        if getInteractableAttribute "displayOptionButtons" mbint == Just (Abool True) then
+                            reactivateMultiChoiceFromBackup mbint
+
+                        else
+                            makeItemWritable mbint
+                   )
+
+        Nothing ->
+            Nothing
+
+        _ ->
+            mbinteractable
+                |> writeInteractionIncident "error" "Trying to use resetOption function with an interactable that is not an Item ! "
+
+
 {-| This change should only be used in conjunction with isChosenOptionEqualTo as a condition
 if that condition is verified we know that playerChoice is equal to matchedValue and we can just call
 checkAndActIfChosenOptionIs
 -}
-processChosenOptionEqualTo : CheckOptionData -> Maybe Interactable -> Maybe Interactable
-processChosenOptionEqualTo cOptionData mbinteractable =
-    checkAndActIfChosenOptionIs cOptionData.valueToMatch cOptionData mbinteractable
+
+
+
+--processChosenOptionEqualTo : CheckOptionData -> Manifest -> Maybe Interactable -> Maybe Interactable
+--processChosenOptionEqualTo cOptionData manifest mbinteractable =
+--    checkAndActIfChosenOptionIs cOptionData.choiceMatches [ cOptionData ] manifest mbinteractable
 
 
 moveCharacterToLocation : String -> Maybe Interactable -> Maybe Interactable
@@ -1593,6 +1741,27 @@ getAttributeByIdAndInteractableId attrId interactableId manifest =
 
         _ ->
             Nothing
+
+
+setNextChangeWorldCommandsToBeExecuted : List ChangeWorldCommand -> Maybe Interactable -> Maybe Interactable
+setNextChangeWorldCommandsToBeExecuted lcwcmds mbInteractable =
+    case mbInteractable of
+        Just (Item idata) ->
+            Just (Item { idata | newCWCmds = lcwcmds })
+
+        Just (Character cdata) ->
+            Just (Character { cdata | newCWCmds = lcwcmds })
+
+        Just (Location ldata) ->
+            Just (Location { ldata | newCWCmds = lcwcmds })
+
+        Nothing ->
+            mbInteractable
+
+
+clearNextChangeWorldCommandsToBeExecuted : Maybe Interactable -> Maybe Interactable
+clearNextChangeWorldCommandsToBeExecuted mbInteractable =
+    setNextChangeWorldCommandsToBeExecuted [] mbInteractable
 
 
 getReservedAttrIds : List String

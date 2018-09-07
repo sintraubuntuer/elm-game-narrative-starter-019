@@ -63,6 +63,12 @@ getListOfItems initItems lQuestionNrs lMultiOptionNrs =
                 |> addDisplayInfo (NarrativeDSFuncs.getMultiOptionName nr "en") (NarrativeDSFuncs.getMultiOptionBodyAsString nr "en")
                 |> addLgDisplayInfo "pt" (NarrativeDSFuncs.getMultiOptionName nr "pt") (NarrativeDSFuncs.getMultiOptionBodyAsString nr "pt")
 
+        createResetMultiOptionEntity : Int -> Int -> Entity
+        createResetMultiOptionEntity index nr =
+            entity ("reset_" ++ NarrativeDSFuncs.getOptionId nr)
+                |> addDisplayInfo ("reset_" ++ NarrativeDSFuncs.getMultiOptionName nr "en") ("reset_" ++ NarrativeDSFuncs.getMultiOptionBodyAsString nr "en")
+                |> addDisplayInfo ("reset_" ++ NarrativeDSFuncs.getMultiOptionName nr "pt") ("reset_" ++ NarrativeDSFuncs.getMultiOptionBodyAsString nr "pt")
+
         moreQuestionItems : List Entity
         moreQuestionItems =
             lQuestionNrs
@@ -72,9 +78,15 @@ getListOfItems initItems lQuestionNrs lMultiOptionNrs =
         moreMultiOptionItems =
             lMultiOptionNrs
                 |> List.map createMultiOptionEntity
+
+        multiOptionResets : List Entity
+        multiOptionResets =
+            lMultiOptionNrs
+                |> List.indexedMap (\index nr -> createResetMultiOptionEntity index nr)
     in
     List.append initItems moreQuestionItems
         |> List.append moreMultiOptionItems
+        |> List.append multiOptionResets
 
 
 items : List Entity

@@ -100,6 +100,7 @@ type alias StorySnippet =
     , narrative : String
     , mbAudio : Maybe AudioFileInfo
     , mbSuggestedInteractionId : Maybe String
+    , suggestedInteractionCaption : String
     , mbSuggestedInteractionName : Maybe String
     , isLastInZipper : Bool
     }

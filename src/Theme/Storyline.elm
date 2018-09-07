@@ -22,7 +22,7 @@ view :
     -> Html Msg
 view storyLine lgId showTextBoxInStoryline mbplaceholdertext mbanswerboxtext answerOptionsDict ending =
     let
-        storyLi i { interactableName, interactableId, isWritable, interactableCssSelector, narrative, mbAudio, mbSuggestedInteractionId, mbSuggestedInteractionName, isLastInZipper } =
+        storyLi i { interactableName, interactableId, isWritable, interactableCssSelector, narrative, mbAudio, mbSuggestedInteractionId, suggestedInteractionCaption, mbSuggestedInteractionName, isLastInZipper } =
             let
                 numLines =
                     List.length storyLine
@@ -70,7 +70,7 @@ view storyLine lgId showTextBoxInStoryline mbplaceholdertext mbanswerboxtext ans
                         case mbSuggestedInteractionId of
                             Just suggestedInteractableId ->
                                 div [ class "textRight" ]
-                                    [ p [ class "suggestInteraction" ] [ text <| getInLanguage lgId "___SUGGESTED_INTERACTION___" ]
+                                    [ p [ class "suggestInteraction" ] [ text <| suggestedInteractionCaption ]
                                     , a [ class "suggestedInteractionLink", onClick <| Interact <| suggestedInteractableId ]
                                         [ text <| Maybe.withDefault suggestedInteractableId mbSuggestedInteractionName ]
                                     ]

@@ -5,6 +5,7 @@ module OurStory.NarrativeDataStructures exposing
     , numberOfDesiredStages
     , questionsAndOrOptionsOnEveryStageExcept
     , questionsMaxNrTries
+    , theMultiOptionParams
     , theMultiOptionsDict
     , theQuestionsDict
     , theStagesDict
@@ -13,7 +14,7 @@ module OurStory.NarrativeDataStructures exposing
 
 import ClientTypes
 import Dict exposing (Dict)
-import Types exposing (Manifest)
+import Types exposing (ChoiceMatches(..), FeedbackText(..), Manifest)
 
 
 type alias LanguageId =
@@ -23,8 +24,8 @@ type alias LanguageId =
 type alias Question =
     { questionBody : String
     , questionName : String
-    , additionalTextIfCorrectAnswer : List String
-    , additionalTextIfIncorrectAnswer : List String
+    , additionalTextIfCorrectAnswer : FeedbackText
+    , additionalTextIfIncorrectAnswer : FeedbackText
     , availableChoices : List ( String, String )
     , questionAnswers : List String
     }
@@ -33,7 +34,7 @@ type alias Question =
 type alias MultiOption =
     { optionBody : String
     , optionName : String
-    , availableChoices : List ( String, String )
+    , availableChoices : List ( String, String, FeedbackText )
     }
 
 
@@ -333,9 +334,9 @@ theQuestionsDict =
         [ ( ( 101, "pt" )
           , { questionBody = "Próximo da entrada da Vila Sassetti está também a entrada para um outro Parque. De que parque se trata ?"
             , questionName = "questão 1"
-            , additionalTextIfCorrectAnswer = [ """Muito Bem ! A entrada do parque das merendas fica de facto ao lado da entrada para Vila Sassetti !
+            , additionalTextIfCorrectAnswer = SimpleText [ """Muito Bem ! A entrada do parque das merendas fica de facto ao lado da entrada para Vila Sassetti !
               """ ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = []
             , questionAnswers = [ "Parque das Merendas", "Merendas" ]
             }
@@ -343,9 +344,9 @@ theQuestionsDict =
         , ( ( 101, "en" )
           , { questionBody = "Near the entrance of Vila Sassetti is also the entrance to another Park . What's that Park ? "
             , questionName = "question 1"
-            , additionalTextIfCorrectAnswer = [ """Well Done ! The entrance to Parque das Merendas is located right next to the entrance to Vila Sassetti !
+            , additionalTextIfCorrectAnswer = SimpleText [ """Well Done ! The entrance to Parque das Merendas is located right next to the entrance to Vila Sassetti !
               """ ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = []
 
             -- no need to duplicate answers . Just add the ones that eventually make sense in a different language
@@ -356,8 +357,8 @@ theQuestionsDict =
         , ( ( 201, "pt" )
           , { questionBody = "quantos azulejos observas no maior banco  ?"
             , questionName = "questão 2"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "Vá lá ... Não é uma pergunta difícil ! " ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = SimpleText [ "Vá lá ... Não é uma pergunta difícil ! " ]
             , availableChoices = [ ( "18", "Dezoito (18)" ), ( "19", "Dezanove (19)" ), ( "20", "Vinte (20)" ), ( "21", "Vinte e um (21)" ), ( "22", "Vinte e dois (22)" ), ( "23", "Vinte e três (23)" ) ]
             , questionAnswers = [ "21", "vinte e um" ]
             }
@@ -365,8 +366,8 @@ theQuestionsDict =
         , ( ( 201, "en" )
           , { questionBody = "How many tiles do you see on the biggest seat  ?"
             , questionName = "question 2"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "Come on ... That's is not a tough question ! " ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = SimpleText [ "Come on ... That's is not a tough question ! " ]
             , availableChoices = [ ( "18", "Eighteen (18)" ), ( "19", "Nineteen (19)" ), ( "20", "Twenty (20)" ), ( "21", "Twenty One (21)" ), ( "22", "Twenty Two (22)" ), ( "23", "Twenty Three (23)" ), ( "24", "Twenty Four (24)" ), ( "25", "Twenty Five (25)" ) ]
 
             -- no need to duplicate answers . Just add the ones that eventually make sense in a different language
@@ -377,8 +378,8 @@ theQuestionsDict =
         , ( ( 202, "pt" )
           , { questionBody = "quantos circulos estão sobre a coroa   ?"
             , questionName = "questão 22"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "Vá lá ... Não é uma pergunta difícil ! " ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = SimpleText [ "Vá lá ... Não é uma pergunta difícil ! " ]
             , availableChoices = [ ( "2", "Dois (2)" ), ( "3", "Três (3)" ), ( "4", "Quatro (4)" ), ( "5", "Cinco (5)" ), ( "6", "Seis (6)" ) ]
             , questionAnswers = [ "5", "cinco" ]
             }
@@ -386,8 +387,8 @@ theQuestionsDict =
         , ( ( 202, "en" )
           , { questionBody = "How many circles over the crown  ?"
             , questionName = "question 22"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "Come on ... That is not a tough question ! " ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = SimpleText [ "Come on ... That is not a tough question ! " ]
             , availableChoices = [ ( "2", "Two (2)" ), ( "3", "Three (3)" ), ( "4", "Four (4)" ), ( "5", "Five (5)" ), ( "6", "Six (6)" ) ]
             , questionAnswers = [ "five" ]
             }
@@ -395,8 +396,8 @@ theQuestionsDict =
         , ( ( 301, "pt" )
           , { questionBody = """Quantos pilares consegues contar até ao placard que indica "Casa do Caseiro , Casa Principal , etc ..." """
             , questionName = "questão 3"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = [ ( "9", "Nove (9)" ), ( "11", "Onze (11)" ), ( "13", "Treze (13)" ), ( "15", "Quinze (15)" ), ( "17", "Dezassete (17)" ) ]
             , questionAnswers = [ "15", "quinze" ]
             }
@@ -404,8 +405,8 @@ theQuestionsDict =
         , ( ( 301, "en" )
           , { questionBody = """How many pillars can you count from here to the placard with "Casa do Caseiro , Casa Principal , etc ..." written on it """
             , questionName = "question 3"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = [ ( "9", "Nine (9)" ), ( "11", "Eleven (11)" ), ( "13", "Thirteen (13)" ), ( "15", "Fifteen (15)" ), ( "17", "Seventeen (17)" ) ]
             , questionAnswers = [ "fifteen" ]
             }
@@ -413,8 +414,8 @@ theQuestionsDict =
         , ( ( 401, "pt" )
           , { questionBody = """O relógio de sol indica de que horas a que horas (ex: 9 a 10)?"""
             , questionName = "questão 4"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = [ ( "1 a 12", "1 a 12" ), ( "8 a 12", "8 a 12" ), ( "1 a 8", "1 a 8" ), ( "8 a 4", "8 a 4" ) ]
             , questionAnswers = [ "8 a 4", "8 as 4", "8-4" ]
             }
@@ -422,8 +423,8 @@ theQuestionsDict =
         , ( ( 401, "en" )
           , { questionBody = """The sun clock tells the time from what hour of the day to what hour (ex: 9 to 10)?"""
             , questionName = "question 4"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = [ ( "1 to 12", "1 to 12" ), ( "8 to 12", "8 to 12" ), ( "1 to 8", "1 to 8" ), ( "8 to 4", "8 to 4" ) ]
             , questionAnswers = [ "8 to 4" ]
             }
@@ -431,8 +432,8 @@ theQuestionsDict =
         , ( ( 402, "pt" )
           , { questionBody = """Á tua direita quantos degraus podes observar ?"""
             , questionName = "questão 42"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = [ ( "18", "Dezoito (18)" ), ( "19", "Dezanove (19)" ), ( "20", "Vinte (20)" ), ( "21", "Vinte e um (21)" ), ( "22", "Vinte e dois (22)" ), ( "23", "Vinte e três (23)" ) ]
             , questionAnswers = [ "21", "vinte e um" ]
             }
@@ -440,8 +441,8 @@ theQuestionsDict =
         , ( ( 402, "en" )
           , { questionBody = """How many steps do you see to the right ?"""
             , questionName = "question 42"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = [ ( "18", "Eighteen (18)" ), ( "19", "Nineteen (19)" ), ( "20", "Twenty (20)" ), ( "21", "Twenty One (21)" ), ( "22", "Twenty Two (22)" ), ( "23", "Twenty Three (23)" ) ]
             , questionAnswers = [ "twenty one" ]
             }
@@ -449,8 +450,8 @@ theQuestionsDict =
         , ( ( 501, "pt" )
           , { questionBody = "Qual o nome da planta que se encontra indicado ?"
             , questionName = "questão 5"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = []
             , questionAnswers = [ "Camellia Japonica", "Camellia Japonica L.", "THEACEAE" ]
             }
@@ -458,8 +459,8 @@ theQuestionsDict =
         , ( ( 501, "en" )
           , { questionBody = "What's the name of the plant ( written on the sign ) ?"
             , questionName = "question 5"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = []
             , questionAnswers = []
             }
@@ -467,8 +468,8 @@ theQuestionsDict =
         , ( ( 601, "pt" )
           , { questionBody = "Parece-te uma cadeira confortável ?"
             , questionName = "questão 6"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = []
             , questionAnswers = [ "sim", "não", "nao" ]
             }
@@ -476,8 +477,8 @@ theQuestionsDict =
         , ( ( 601, "en" )
           , { questionBody = "Does it seem like a comfortable chair  ?"
             , questionName = "question 6"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = []
             , questionAnswers = [ "yes", "no" ]
             }
@@ -485,8 +486,8 @@ theQuestionsDict =
         , ( ( 701, "pt" )
           , { questionBody = "Quantos troncos ( cortados ) podes observar junto ao rochedo ?"
             , questionName = "questão 7"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = [ ( "2", "Dois (2)" ), ( "3", "Tres (3)" ), ( "4", "Quatro (4)" ), ( "5", "Cinco (5)" ) ]
             , questionAnswers = [ "2", "dois" ]
             }
@@ -494,8 +495,8 @@ theQuestionsDict =
         , ( ( 701, "en" )
           , { questionBody = "how many ( chopped ) logs can you see near the big rock"
             , questionName = "question 7"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = [ ( "2", "Two (2)" ), ( "3", "Three (3)" ), ( "4", "Four (4)" ), ( "5", "Five (5)" ) ]
             , questionAnswers = [ "two" ]
             }
@@ -503,8 +504,8 @@ theQuestionsDict =
         , ( ( 801, "pt" )
           , { questionBody = "Qual a distância indicada ( em metros ) para o Penedo da Amizade ?"
             , questionName = "questão 8"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = []
             , questionAnswers = [ "115", "cento e quinze" ]
             }
@@ -512,8 +513,8 @@ theQuestionsDict =
         , ( ( 801, "en" )
           , { questionBody = "What's the distance ( in meters ) to Penedo da Amizade ( Cliff of Amizade ) shown on the sign  ?"
             , questionName = "question 8"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = []
             , questionAnswers = [ "hundred and fifteen" ]
             }
@@ -521,8 +522,8 @@ theQuestionsDict =
         , ( ( 901, "pt" )
           , { questionBody = "No topoguia informativo sobre as vias de escalada no Penedo da Amizade qual o Nome da via Nº 7 ?"
             , questionName = "questão 9"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = []
             , questionAnswers = [ "Funk da Serra" ]
             }
@@ -530,8 +531,8 @@ theQuestionsDict =
         , ( ( 901, "en" )
           , { questionBody = "What's the name of climbing route Nº 7 shown on  Penedo da Amizade Rock climbing guide  ?"
             , questionName = "question 9"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = []
             , questionAnswers = []
             }
@@ -539,8 +540,8 @@ theQuestionsDict =
         , ( ( 1001, "pt" )
           , { questionBody = "Logo após a porta de saída está um placard informativo. Qual a distância ( em metros ) para o Palácio da Pena ? "
             , questionName = "questão 10"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = []
             , questionAnswers = [ "495", "quatrocentos e noventa e cinco" ]
             }
@@ -548,8 +549,8 @@ theQuestionsDict =
         , ( ( 1001, "en" )
           , { questionBody = "right after the door there's an informative sign. What's the distance ( in meters ) to Parque da Pena ( Park of Pena )  ?"
             , questionName = "question 10"
-            , additionalTextIfCorrectAnswer = [ "" ]
-            , additionalTextIfIncorrectAnswer = [ "" ]
+            , additionalTextIfCorrectAnswer = NoFeedbackText
+            , additionalTextIfIncorrectAnswer = NoFeedbackText
             , availableChoices = []
             , questionAnswers = [ "four hundred and ninety five" ]
             }
@@ -574,67 +575,138 @@ questionsMaxNrTries =
         ]
 
 
+theMultiOptionParams : Dict Int { displayOptionButtons : Bool, resetPossible : Bool }
+theMultiOptionParams =
+    Dict.fromList
+        [ ( 101
+          , { displayOptionButtons = True
+            , resetPossible = True
+            }
+          )
+        , ( 201
+          , { displayOptionButtons = True
+            , resetPossible = False
+            }
+          )
+        , ( 301
+          , { displayOptionButtons = True
+            , resetPossible = False
+            }
+          )
+        , ( 401
+          , { displayOptionButtons = True
+            , resetPossible = False
+            }
+          )
+        , ( 601
+          , { displayOptionButtons = True
+            , resetPossible = False
+            }
+          )
+        ]
+
+
 theMultiOptionsDict : Dict ( Int, LanguageId ) MultiOption
 theMultiOptionsDict =
     Dict.fromList
         [ ( ( 101, "pt" )
           , { optionBody = "o percurso de Vila Sassetti parece-te interessante ? "
             , optionName = "opcao1"
-            , availableChoices = [ ( "yes", "Sim" ), ( "no", "Não" ), ( "maybe", "talvez" ) ]
+            , availableChoices =
+                [ ( "yes", "Sim", SimpleText [ "boa escolha , o percurso de Vila Sassetti é muito interessante" ] )
+                , ( "no", "Não", NoFeedbackText )
+                , ( "maybe", "talvez", NoFeedbackText )
+                ]
             }
           )
         , ( ( 101, "en" )
           , { optionBody = "Does the footpath seem interesting ? "
             , optionName = "option1"
-            , availableChoices = [ ( "yes", "yes" ), ( "no", "no" ), ( "maybe", "maybe" ) ]
+            , availableChoices =
+                [ ( "yes", "yes", NoFeedbackText )
+                , ( "no", "no", NoFeedbackText )
+                , ( "maybe", "maybe", NoFeedbackText )
+                ]
             }
           )
         , ( ( 201, "pt" )
           , { optionBody = "a cadeira parece-te um pouco esquisita ?"
             , optionName = "opcao21"
-            , availableChoices = [ ( "yes", "Sim" ), ( "no", "Não" ), ( "maybe", "talvez" ) ]
+            , availableChoices =
+                [ ( "yes", "Sim", NoFeedbackText )
+                , ( "no", "Não", NoFeedbackText )
+                , ( "maybe", "talvez", NoFeedbackText )
+                ]
             }
           )
         , ( ( 201, "en" )
           , { optionBody = "Do you find the seat a bit odd ?"
             , optionName = "option21"
-            , availableChoices = [ ( "yes", "yes" ), ( "no", "no" ), ( "maybe", "maybe" ) ]
+            , availableChoices =
+                [ ( "yes", "yes", NoFeedbackText )
+                , ( "no", "no", NoFeedbackText )
+                , ( "maybe", "maybe", NoFeedbackText )
+                ]
             }
           )
         , ( ( 301, "pt" )
           , { optionBody = "estás a gostar do percurso ?"
             , optionName = "opcao31"
-            , availableChoices = [ ( "yes", "Sim" ), ( "no", "Não" ), ( "maybe", "talvez" ) ]
+            , availableChoices =
+                [ ( "yes", "Sim", NoFeedbackText )
+                , ( "no", "Não", NoFeedbackText )
+                , ( "maybe", "talvez", NoFeedbackText )
+                ]
             }
           )
         , ( ( 301, "en" )
           , { optionBody = "Are you enjoying the trail ?"
             , optionName = "option31"
-            , availableChoices = [ ( "yes", "yes" ), ( "no", "no" ), ( "maybe", "maybe" ) ]
+            , availableChoices =
+                [ ( "yes", "yes", NoFeedbackText )
+                , ( "no", "no", NoFeedbackText )
+                , ( "maybe", "maybe", NoFeedbackText )
+                ]
             }
           )
         , ( ( 401, "pt" )
           , { optionBody = "qual a tua opinião sobre o relógio"
             , optionName = "opcao41"
-            , availableChoices = [ ( "fenomenal", "fenomenal" ), ( "engraçado", "engraçado" ), ( "esquisito", "esquisito" ) ]
+            , availableChoices =
+                [ ( "fenomenal", "fenomenal", NoFeedbackText )
+                , ( "engraçado", "engraçado", NoFeedbackText )
+                , ( "esquisito", "esquisito", NoFeedbackText )
+                ]
             }
           )
         , ( ( 401, "en" )
           , { optionBody = "What do you think about the clock ? "
             , optionName = "option41"
-            , availableChoices = [ ( "phenomenal", "phenomenal" ), ( "nice", "nice" ), ( "weird", "weird" ) ]
+            , availableChoices =
+                [ ( "phenomenal", "phenomenal", NoFeedbackText )
+                , ( "nice", "nice", NoFeedbackText )
+                , ( "weird", "weird", NoFeedbackText )
+                ]
             }
           )
         , ( ( 601, "pt" )
           , { optionBody = "O que pensas da cadeira ?"
             , optionName = "opcao61"
-            , availableChoices = [ ( "muito util", "muito útil" ), ( "artistica", "artística" ), ( "esquisita", "esquisita" ) ]
+            , availableChoices =
+                [ ( "muito util", "muito útil", NoFeedbackText )
+                , ( "artistica", "artística", NoFeedbackText )
+                , ( "esquisita", "esquisita", NoFeedbackText )
+                ]
             }
           )
         , ( ( 601, "en" )
           , { optionBody = "What do you think of the chair ?"
             , optionName = "option61"
-            , availableChoices = [ ( "very useful", "very useful" ), ( "artistic", "artistic" ), ( "weird", "weird" ) ]
+            , availableChoices =
+                [ ( "very useful", "very useful", NoFeedbackText )
+                , ( "artistic", "artistic", NoFeedbackText )
+                , ( "weird", "weird", NoFeedbackText )
+                ]
             }
           )
         ]

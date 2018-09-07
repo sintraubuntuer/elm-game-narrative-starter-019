@@ -69,16 +69,20 @@ module Engine exposing
       , itemIsNotCorrectlyAnswered
       , itemIsNotInCharacterInventory
       , itemIsOffScreen
+      , listOfAnswersAndFunctions
       , makeItemUnwritable
       , makeItemWritable
+      , matchAnyNonEmptyString
+      , matchStringValue
       , moveItemToCharacterInventory
       , noChosenOptionYet
       , noFeedback
       , noQuasiChange
       , noQuasiChangeWithBackend
-      , processChosenOptionEqualTo
+        --, processChosenOptionEqualTo
       , removeAttributeIfExists
       , removeMultiChoiceOptions
+      , resetOption
       , setAttributeValue
       , setRandomFloatElems
       , simpleCheck_IfAnswerCorrect
@@ -223,9 +227,8 @@ init itemsCharactersLocationsRecord playerId llanguages rules lprandom_floats =
 setRandomFloatElems : List Float -> Model -> Model
 setRandomFloatElems lfloats (Model story) =
     let
-        _ =
-            Debug.log "now setting random elements " (List.head lfloats)
-
+        --_ =
+        --  Debug.log "now setting random elements " (List.head lfloats)
         newStory =
             { story | lprandomfloats = lfloats }
     in
@@ -566,8 +569,8 @@ replaceQuasiCwCmdsWithCwcommands extraInfo lfloats quasiCwCommand =
         Check_IfAnswerCorrect theCorrectAnswers cAnswerData interactableId ->
             ( replaceCheckIfAnswerCorrect extraInfo.mbInputText theCorrectAnswers cAnswerData interactableId, lfloats )
 
-        CheckAndAct_IfChosenOptionIs cOptionData itemid ->
-            ( replaceCheckAndActIfChosenOptionIs extraInfo.mbInputText cOptionData itemid, lfloats )
+        CheckAndAct_IfChosenOptionIs lcOptionData itemid ->
+            ( replaceCheckAndActIfChosenOptionIs extraInfo.mbInputText lcOptionData itemid, lfloats )
 
         Write_InputTextToItem interactableId ->
             ( replaceWriteInputTextToItem extraInfo.mbInputText interactableId, lfloats )
@@ -606,8 +609,8 @@ replaceCheckIfAnswerCorrectUsingBackend bkendAnsStatus strUrl cAnswerData intera
                         CaseInsensitiveAnswer
                         AnswerSpacesDontMatter
                         cAnswerData.answerFeedback
-                        (Dict.fromList <| List.map (\x -> ( x.lgId, [ x.text ] )) answerinfo.successTextList)
-                        (Dict.fromList <| List.map (\x -> ( x.lgId, [ x.text ] )) answerinfo.insuccessTextList)
+                        (Dict.fromList <| List.map (\x -> ( x.lgId, SimpleText [ x.text ] )) answerinfo.successTextList)
+                        (Dict.fromList <| List.map (\x -> ( x.lgId, SimpleText [ x.text ] )) answerinfo.insuccessTextList)
                         cAnswerData.lnewAttrs
                         cAnswerData.lotherInterAttrs
 
@@ -631,10 +634,10 @@ replaceCheckIfAnswerCorrectUsingBackend bkendAnsStatus strUrl cAnswerData intera
                     interactableId
 
             else if answerinfo.answered && answerinfo.correctAnswer then
-                CheckIfAnswerCorrect [ answerinfo.playerAnswer ] answerinfo.playerAnswer newCheckAnswerDataIfSuccess interactableId
+                CheckIfAnswerCorrect (ListOfAnswersAndFunctions [ answerinfo.playerAnswer ] []) answerinfo.playerAnswer newCheckAnswerDataIfSuccess interactableId
 
             else if answerinfo.answered && answerinfo.incorrectAnswer then
-                CheckIfAnswerCorrect [ answerinfo.playerAnswer ++ "something" ] answerinfo.playerAnswer newCheckAnswerDataIfInsuccess interactableId
+                CheckIfAnswerCorrect (ListOfAnswersAndFunctions [ answerinfo.playerAnswer ++ "something" ] []) answerinfo.playerAnswer newCheckAnswerDataIfInsuccess interactableId
 
             else
                 -- ( not answerinfo.answered )
@@ -646,26 +649,26 @@ replaceCheckIfAnswerCorrectUsingBackend bkendAnsStatus strUrl cAnswerData intera
                 interactableId
 
 
-replaceCheckIfAnswerCorrect : Maybe String -> List String -> CheckAnswerData -> String -> ChangeWorldCommand
-replaceCheckIfAnswerCorrect mbInputText theCorrectAnswers cAnswerData interactableId =
+replaceCheckIfAnswerCorrect : Maybe String -> QuestionAnswer -> CheckAnswerData -> String -> ChangeWorldCommand
+replaceCheckIfAnswerCorrect mbInputText questionAns cAnswerData interactableId =
     if mbInputText /= Nothing && mbInputText /= Just "" then
         let
             playerAnswer =
                 Maybe.withDefault "" mbInputText
         in
-        CheckIfAnswerCorrect theCorrectAnswers playerAnswer cAnswerData interactableId
+        CheckIfAnswerCorrect questionAns playerAnswer cAnswerData interactableId
 
     else
         NoChange
 
 
-replaceCheckAndActIfChosenOptionIs : Maybe String -> CheckOptionData -> String -> ChangeWorldCommand
-replaceCheckAndActIfChosenOptionIs mbInputText cOptionData itemid =
+replaceCheckAndActIfChosenOptionIs : Maybe String -> List CheckOptionData -> String -> ChangeWorldCommand
+replaceCheckAndActIfChosenOptionIs mbInputText lcOptionData itemid =
     let
         playerChoice =
             Maybe.withDefault "" mbInputText
     in
-    CheckAndActIfChosenOptionIs playerChoice cOptionData itemid
+    CheckAndActIfChosenOptionIs playerChoice lcOptionData itemid
 
 
 {-| used to replace the Write\_TextToItem QuasiChangeWorldCommand coming from the configuration rules file
@@ -724,8 +727,8 @@ changeWorld changes (Model story) =
                     in
                     ( { storyRecord | manifest = newManifest }, newIncidents )
 
-        _ =
-            Debug.log "after Engine Update the number of elements of prandomfloats is : " (List.length story.lprandomfloats)
+        --_ =
+        --    Debug.log "after Engine Update the number of elements of prandomfloats is : " (List.length story.lprandomfloats)
     in
     List.foldr (\chg y -> doChange chg y) ( story, [] ) changes
         |> (\( x, y ) -> ( Model x, y ))
@@ -1102,14 +1105,14 @@ after it is replaced by CheckIfAnswerCorrect it will be processed by the respect
 Checks if player answer is
 contained in given list string = allowed right answers ( first arg )
 -}
-check_IfAnswerCorrect : List String -> CheckAnswerData -> String -> QuasiChangeWorldCommand
+check_IfAnswerCorrect : QuestionAnswer -> CheckAnswerData -> String -> QuasiChangeWorldCommand
 check_IfAnswerCorrect =
     Check_IfAnswerCorrect
 
 
-simpleCheck_IfAnswerCorrect : List String -> Maybe Int -> String -> QuasiChangeWorldCommand
-simpleCheck_IfAnswerCorrect lcorrectAnswers mbNrTries interactableId =
-    Check_IfAnswerCorrect lcorrectAnswers (CheckAnswerData mbNrTries CaseInsensitiveAnswer AnswerSpacesDontMatter HeaderAnswerAndCorrectIncorrect Dict.empty Dict.empty [] []) interactableId
+simpleCheck_IfAnswerCorrect : QuestionAnswer -> Maybe Int -> String -> QuasiChangeWorldCommand
+simpleCheck_IfAnswerCorrect lcorrectAnswersAndFuncs mbNrTries interactableId =
+    Check_IfAnswerCorrect lcorrectAnswersAndFuncs (CheckAnswerData mbNrTries CaseInsensitiveAnswer AnswerSpacesDontMatter HeaderAnswerAndCorrectIncorrect Dict.empty Dict.empty [] []) interactableId
 
 
 check_IfAnswerCorrectUsingBackend : String -> CheckBkendAnswerData -> String -> QuasiChangeWorldCommandWithBackendInfo
@@ -1122,14 +1125,20 @@ simpleCheck_IfAnswerCorrectUsingBackend strUrl mbNrTries interactableId =
     Check_IfAnswerCorrectUsingBackend strUrl (CheckBkendAnswerData mbNrTries HeaderAnswerAndCorrectIncorrect [] []) interactableId
 
 
-checkAndAct_IfChosenOptionIs : CheckOptionData -> String -> QuasiChangeWorldCommand
+checkAndAct_IfChosenOptionIs : List CheckOptionData -> String -> QuasiChangeWorldCommand
 checkAndAct_IfChosenOptionIs =
     CheckAndAct_IfChosenOptionIs
 
 
-processChosenOptionEqualTo : CheckOptionData -> String -> ChangeWorldCommand
-processChosenOptionEqualTo =
-    ProcessChosenOptionEqualTo
+
+--processChosenOptionEqualTo : CheckOptionData -> String -> ChangeWorldCommand
+--processChosenOptionEqualTo =
+--    ProcessChosenOptionEqualTo
+
+
+resetOption : String -> ChangeWorldCommand
+resetOption =
+    ResetOption
 
 
 {-| creates an attribute with name ("counter\_" ++ Id) with Id passed as first arg , in interactable with Id : String second arg
@@ -1235,7 +1244,7 @@ addChoiceLanguage =
     AddChoiceLanguage
 
 
-checkAnswerData : Maybe Int -> AnswerCase -> AnswerSpaces -> AnswerFeedback -> Dict String (List String) -> Dict String (List String) -> List ( String, AttrTypes ) -> List ( String, String, AttrTypes ) -> CheckAnswerData
+checkAnswerData : Maybe Int -> AnswerCase -> AnswerSpaces -> AnswerFeedback -> Dict String FeedbackText -> Dict String FeedbackText -> List ( String, AttrTypes ) -> List ( String, String, AttrTypes ) -> CheckAnswerData
 checkAnswerData =
     CheckAnswerData
 
@@ -1245,9 +1254,19 @@ checkBkendAnswerData =
     CheckBkendAnswerData
 
 
-checkOptionData : String -> Dict String (List String) -> List ( String, AttrTypes ) -> List ( String, String, AttrTypes ) -> CheckOptionData
+checkOptionData : ChoiceMatches -> Dict String FeedbackText -> List ( String, AttrTypes ) -> List ( String, String, AttrTypes ) -> List ChangeWorldCommand -> CheckOptionData
 checkOptionData =
     CheckOptionData
+
+
+matchStringValue : String -> ChoiceMatches
+matchStringValue =
+    MatchStringValue
+
+
+matchAnyNonEmptyString : ChoiceMatches
+matchAnyNonEmptyString =
+    MatchAnyNonEmptyString
 
 
 astring : String -> AttrTypes
@@ -1288,6 +1307,11 @@ aDictStringListString =
 aDictStringLSS : Dict String (List ( String, String )) -> AttrTypes
 aDictStringLSS =
     ADictStringLSS
+
+
+listOfAnswersAndFunctions : List String -> List (String -> Manifest -> Bool) -> QuestionAnswer
+listOfAnswersAndFunctions =
+    Types.ListOfAnswersAndFunctions
 
 
 completeTheRule : Rule_ -> Rule
