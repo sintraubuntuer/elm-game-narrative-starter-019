@@ -35,6 +35,7 @@ import OurStory.NarrativeDSFuncs as NarrativeDSFuncs
         , getQuestionIdsByStageNr
         , getQuestionNrsByStageNr
         , getQuestionsAndOrOptionsOnEveryStageExcept
+        , getResetPossibleOptionParam
         , getStageId
         , getStageOptionIds
         , getStageOptionNrs
@@ -51,7 +52,7 @@ useGoalStatusReport =
 
 correctAnswerNotRequiredToMove : List Int
 correctAnswerNotRequiredToMove =
-    [ 3 ]
+    [ 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
 
 
 
@@ -148,11 +149,13 @@ moveMultiOptionsToStagesFixed =
                                 if NarrativeDSFuncs.getDisplayOptionButtonsOptionParam nr |> Maybe.withDefault True then
                                     [ createAmultiChoice (NarrativeDSFuncs.getMultiOptionAvailableChoicesDict nr) id
                                     , createAttributeIfNotExistsAndOrSetValue (abool True) "displayOptionButtons" id
+                                    , createAttributeIfNotExistsAndOrSetValue (abool (getResetPossibleOptionParam nr |> Maybe.withDefault False)) "isResetOptionPossible" id
                                     ]
 
                                 else
                                     [ makeItemWritable id
                                     , createAttributeIfNotExistsAndOrSetValue (abool False) "displayOptionButtons" id
+                                    , createAttributeIfNotExistsAndOrSetValue (abool (getResetPossibleOptionParam nr |> Maybe.withDefault False)) "isResetOptionPossible" id
                                     ]
                             )
 

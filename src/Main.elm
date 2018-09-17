@@ -28,7 +28,6 @@ port module Main exposing
 
 --import Audio
 --import Geolocation
---import List.Zipper as Zipper exposing (Zipper)
 
 import Browser
 import ClientTypes exposing (..)
@@ -43,7 +42,7 @@ import InfoForBkendApiRequests
 import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
-import ListZipper
+import List.Zipper as ListZipper
 import OurStory.Manifest as Manifest
 import OurStory.Narrative as Narrative
 import OurStory.Rules as Rules
@@ -570,7 +569,7 @@ update msg model =
                         {- Helper function called by  narrativesForThisInteraction -}
                         isLastZip : ListZipper.Zipper String -> Bool
                         isLastZip val =
-                            if ListZipper.zipperNext val == Nothing then
+                            if ListZipper.next val == Nothing then
                                 True
 
                             else
@@ -628,7 +627,7 @@ update msg model =
                                         |> Maybe.withDefault Dict.empty
                                         |> Dict.map
                                             (\lgId val ->
-                                                (ListZipper.zipperCurrent val
+                                                (ListZipper.current val
                                                     |> temporaryHackToSubstitueImgUrl model.baseImgUrl
                                                     |> wrapWithHeaderWrittenContentAndAdditionalText lgId
                                                 )
@@ -705,7 +704,7 @@ update msg model =
                         -}
                         updateNarrativeContent : Maybe (ListZipper.Zipper String) -> Maybe (ListZipper.Zipper String)
                         updateNarrativeContent =
-                            Maybe.map (\narrative -> ListZipper.zipperNext narrative |> Maybe.withDefault narrative)
+                            Maybe.map (\narrative -> ListZipper.next narrative |> Maybe.withDefault narrative)
 
                         {- If a rule matched, attempt to move to the next associated narrative content for next time.
                            This is a helper function used by  Dict.update in updatedContent

@@ -585,12 +585,12 @@ theMultiOptionParams =
           )
         , ( 201
           , { displayOptionButtons = True
-            , resetPossible = False
+            , resetPossible = True
             }
           )
         , ( 301
           , { displayOptionButtons = True
-            , resetPossible = False
+            , resetPossible = True
             }
           )
         , ( 401

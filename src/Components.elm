@@ -43,7 +43,7 @@ module Components exposing
 import Dict exposing (..)
 import Engine
 import GpsUtils
-import ListZipper exposing (Zipper)
+import List.Zipper as ListZipper exposing (Zipper)
 
 
 
@@ -207,12 +207,12 @@ The narrative that you add to a rule will be shown when that rule matches. If yo
 -}
 addNarrative : List String -> Entity -> Entity
 addNarrative narrative =
-    addComponent "narrative" <| Narrative <| ListZipper.zipperWithDefault "" <| ListZipper.zipperFromList narrative
+    addComponent "narrative" <| Narrative <| ListZipper.withDefault "" <| ListZipper.fromList narrative
 
 
 zipTheStringList : List String -> Zipper String
 zipTheStringList narrative =
-    ListZipper.zipperWithDefault "" <| ListZipper.zipperFromList narrative
+    ListZipper.withDefault "" <| ListZipper.fromList narrative
 
 
 makeZipNarrativesDict : Dict String (List String) -> Dict String (Zipper String)
@@ -409,7 +409,7 @@ getNarrative ( id, components ) =
             narrative
 
         _ ->
-            ListZipper.zipperSingleton id
+            ListZipper.singleton id
 
 
 getLanguageNarrative : String -> Entity -> Zipper String
@@ -421,10 +421,10 @@ getLanguageNarrative languageId ( id, components ) =
                     narrative
 
                 _ ->
-                    ListZipper.zipperSingleton id
+                    ListZipper.singleton id
 
         _ ->
-            ListZipper.zipperSingleton id
+            ListZipper.singleton id
 
 
 getLanguagesNarrativeDict : Entity -> Dict String (Zipper String)

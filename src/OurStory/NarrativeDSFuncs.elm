@@ -669,11 +669,13 @@ getListOfStageNrsWithQuestions =
         |> List.filter (\x -> not (List.member x getQuestionsAndOrOptionsOnEveryStageExcept))
 
 
+getDisplayOptionButtonsOptionParam : Int -> Maybe Bool
 getDisplayOptionButtonsOptionParam optionNr =
     Dict.get optionNr theMultiOptionParams
         |> Maybe.map (\x -> x.displayOptionButtons)
 
 
+getResetPossibleOptionParam : Int -> Maybe Bool
 getResetPossibleOptionParam optionNr =
     Dict.get optionNr theMultiOptionParams
         |> Maybe.map (\x -> x.resetPossible)

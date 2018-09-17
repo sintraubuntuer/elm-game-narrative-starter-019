@@ -1238,6 +1238,10 @@ checkAndActIfChosenOptionIs playerChoice lcOptionData optionId manifest mbintera
                 resetOptionId =
                     "reset_" ++ optionId
 
+                isResetPossible =
+                    getAttributeByIdAndInteractableId "isResetOptionPossible" optionId manifest
+                        |> Maybe.withDefault (Abool False)
+
                 theMbInteractable =
                     if playerChoice == "" && Dict.get "chosenOption" idata.attributes == Nothing then
                         mbinteractable
@@ -1270,7 +1274,13 @@ checkAndActIfChosenOptionIs playerChoice lcOptionData optionId manifest mbintera
                                     |> setNextChangeWorldCommandsToBeExecuted (List.append cOptionData.lnewCWcmds otherInterAttribsRelatedCWcmds)
                                     |> removeAttributeIfExists "answerOptionsList"
                                     |> makeItemUnwritable
-                                    |> createAttributeIfNotExistsAndOrSetValue (Astring resetOptionId) "suggestedInteraction" (Just "internal")
+                                    |> (\mbinter ->
+                                            if isResetPossible == Abool True then
+                                                createAttributeIfNotExistsAndOrSetValue (Astring resetOptionId) "suggestedInteraction" (Just "internal") mbinter
+
+                                            else
+                                                mbinter
+                                       )
 
                             --|> setAttributeValue (aDictStringString Narrative.suggestedDeletedChoiceCaptionDict) "suggestedInteractionCaption" (Just "internal")
                             Nothing ->
