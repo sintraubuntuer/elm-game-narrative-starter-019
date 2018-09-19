@@ -43,6 +43,16 @@ generateGoalsStatusReport questionIds optionIds llgIds extraInfo manifest =
         outputForAllQuestions lgId =
             List.map (\qId -> outputForQuestion qId lgId) questionIds
 
+        outputForAllDoneQuestions : LanguageId -> List String
+        outputForAllDoneQuestions lgId =
+            List.filter (\qId -> questionStatusById qId) questionIds
+                |> List.map (\qId -> outputForQuestion qId lgId)
+
+        outputForAllToDoQuestions : LanguageId -> List String
+        outputForAllToDoQuestions lgId =
+            List.filter (\qId -> not (questionStatusById qId)) questionIds
+                |> List.map (\qId -> outputForQuestion qId lgId)
+
         optionStatusById oId =
             EngineManifest.choiceHasAlreadyBeenMade oId manifest
 
@@ -69,12 +79,29 @@ generateGoalsStatusReport questionIds optionIds llgIds extraInfo manifest =
         outputForAllOptions lgId =
             List.map (\oId -> outputForOption oId lgId) optionIds
 
+        outputForAllDoneOptions : LanguageId -> List String
+        outputForAllDoneOptions lgId =
+            List.filter (\oid -> optionStatusById oid) optionIds
+                |> List.map (\oId -> outputForOption oId lgId)
+
+        outputForAllToDoOptions : LanguageId -> List String
+        outputForAllToDoOptions lgId =
+            List.filter (\oid -> not (optionStatusById oid)) optionIds
+                |> List.map (\oId -> outputForOption oId lgId)
+
         outputForAllQuestionsAndOptions : LanguageId -> List String
         outputForAllQuestionsAndOptions lgId =
             List.append (outputForAllQuestions lgId) (outputForAllOptions lgId)
 
+        outputForAllQuestionsAndOptionsSplitDoneAndToDo : LanguageId -> List String
+        outputForAllQuestionsAndOptionsSplitDoneAndToDo lgId =
+            outputForAllDoneOptions lgId
+                |> List.append (outputForAllDoneQuestions lgId)
+                |> List.append (outputForAllToDoOptions lgId)
+                |> List.append (outputForAllToDoQuestions lgId)
+
         reportLgDict =
-            List.map (\lgId -> ( lgId, outputForAllQuestionsAndOptions lgId )) llgIds
+            List.map (\lgId -> ( lgId, outputForAllQuestionsAndOptionsSplitDoneAndToDo lgId )) llgIds
                 |> Dict.fromList
     in
     [ setAttributeValue (aDictStringListString reportLgDict) "additionalTextDict" "goalsStatusPaper" ]
