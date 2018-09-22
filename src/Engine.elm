@@ -16,6 +16,7 @@ module Engine exposing
       , aDictStringString
       , abool
       , addChoiceLanguage
+      , addToRandomElemsList
       , aliststring
       , aliststringstring
       , anint
@@ -53,6 +54,7 @@ module Engine exposing
       , getInteractableAttribute
       , getItemWrittenContent
       , getItemsInCharacterInventory
+      , getRandomElemsListSize
       , getStoryRules
       , hasEnded
       , hasFreezingEnd
@@ -227,12 +229,24 @@ init itemsCharactersLocationsRecord playerId llanguages rules lprandom_floats =
 setRandomFloatElems : List Float -> Model -> Model
 setRandomFloatElems lfloats (Model story) =
     let
-        --_ =
-        --  Debug.log "now setting random elements " (List.head lfloats)
         newStory =
             { story | lprandomfloats = lfloats }
     in
     Model newStory
+
+
+addToRandomElemsList : List Float -> Model -> Model
+addToRandomElemsList lfloats (Model story) =
+    let
+        newStory =
+            { story | lprandomfloats = List.append story.lprandomfloats lfloats }
+    in
+    Model newStory
+
+
+getRandomElemsListSize : Model -> Int
+getRandomElemsListSize (Model story) =
+    List.length story.lprandomfloats
 
 
 {-| This gets the current scene to display

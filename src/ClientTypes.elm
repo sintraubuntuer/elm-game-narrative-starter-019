@@ -45,6 +45,7 @@ type Msg
     | ExitToFinalScreen
     | Loaded
     | NewRandomElemsAtGameStart (List Float)
+    | FillRandomElemsList (List Float)
 
 
 type alias SaveHistoryRecord =

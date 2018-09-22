@@ -94,7 +94,9 @@ type alias Model =
     , languageStoryLines : Dict String (List StorySnippet)
     , languageNarrativeContents : Dict String (Dict String (ListZipper.Zipper String))
     , languageAudioContents : Dict String (Dict String ClientTypes.AudioFileInfo)
+    , randomElemsListDesiredSize : Int
     , lallgeneretedRandomFloats : List Float
+    , bLoadHistoryMode : Bool
     , displayStartScreen : Bool
     , startScreenInfo : StartScreenInfo
     , displayEndScreen : Bool
@@ -166,7 +168,9 @@ initWithMbPlayerNameAndMbHistoryList flags displayStartScreen_ lPrandomFloats mb
             -- dictionary that associates ruleIds to a dict languageId (narrative : ZipperString)
             , languageNarrativeContents = Dict.map (\a b -> getLanguagesNarrativeDict ( a, b )) dictEntities
             , languageAudioContents = Dict.map (\a b -> getLanguagesAudioDict ( a, b )) dictEntities
+            , randomElemsListDesiredSize = 100
             , lallgeneretedRandomFloats = []
+            , bLoadHistoryMode = False
             , displayStartScreen = displayStartScreen_
             , startScreenInfo = Narrative.startScreenInfo
             , displayEndScreen = False
@@ -175,17 +179,16 @@ initWithMbPlayerNameAndMbHistoryList flags displayStartScreen_ lPrandomFloats mb
                 |> mbSetPlayerName mbPlayerName
     in
     if List.length historyList == 0 then
-        ( newModel, cmdForGeneratingListOfRandomFloats )
-        --Cmd.none
+        ( newModel, cmdForGeneratingListOfRandomFloats newModel.randomElemsListDesiredSize )
 
     else
         getNewModelAfterGameStartRandomElems lPrandomFloats newModel
             |> update (ProcessLoadHistory historyList newModel.settingsModel)
 
 
-cmdForGeneratingListOfRandomFloats : Cmd ClientTypes.Msg
-cmdForGeneratingListOfRandomFloats =
-    Random.generate NewRandomElemsAtGameStart (Random.list 100 (Random.float 0 1))
+cmdForGeneratingListOfRandomFloats : Int -> Cmd ClientTypes.Msg
+cmdForGeneratingListOfRandomFloats lsize =
+    Random.generate NewRandomElemsAtGameStart (Random.list lsize (Random.float 0 1))
 
 
 getNewModelAfterGameStartRandomElems : List Float -> Model -> Model
@@ -874,8 +877,28 @@ update msg model =
                         , languageNarrativeContents = updatedContent
                         , settingsModel = newSettingsModel2
                       }
-                    , Cmd.none
+                    , if not model.bLoadHistoryMode && Engine.getRandomElemsListSize newEngineModel < model.randomElemsListDesiredSize then
+                        Random.generate FillRandomElemsList (Random.list (model.randomElemsListDesiredSize - Engine.getRandomElemsListSize newEngineModel) (Random.float 0 1))
+
+                      else
+                        Cmd.none
                     )
+
+                FillRandomElemsList lfloats ->
+                    let
+                        _ =
+                            Debug.log "going to fill random elems list with some nr of new elements : " (List.length lfloats)
+
+                        newEngineModel =
+                            Engine.addToRandomElemsList lfloats model.engineModel
+
+                        newModel =
+                            { model
+                                | engineModel = newEngineModel
+                                , lallgeneretedRandomFloats = model.lallgeneretedRandomFloats ++ lfloats
+                            }
+                    in
+                    ( newModel, Cmd.none )
 
                 NewRandomElemsAtGameStart lfloats ->
                     let
@@ -976,11 +999,11 @@ update msg model =
                                     ( model, Cmd.none )
 
                                 head :: rest ->
-                                    ( model, Cmd.none )
+                                    ( { model | bLoadHistoryMode = True }, Cmd.none )
                                         |> updateExtraAndThen update (InteractStepTwo (Tuple.first head) (Tuple.second head))
                                         |> updateExtraAndThen update (ProcessLoadHistory rest savedSettings)
                     in
-                    ( { newModel | settingsModel = savedSettings }, cmds )
+                    ( { newModel | settingsModel = savedSettings, bLoadHistoryMode = False }, cmds )
 
                 ExitToFinalScreen ->
                     ( { model | displayEndScreen = True }, Cmd.none )
