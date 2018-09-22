@@ -172,6 +172,7 @@ initWithMbPlayerNameAndMbHistoryList flags displayStartScreen_ lPrandomFloats mb
             , displayEndScreen = False
             , endScreenInfo = Narrative.endScreenInfo
             }
+                |> mbSetPlayerName mbPlayerName
     in
     if List.length historyList == 0 then
         ( newModel, cmdForGeneratingListOfRandomFloats )
@@ -229,6 +230,51 @@ findEntity model id =
         |> Maybe.withDefault (entity id)
 
 
+mbSetPlayerName : Maybe String -> Model -> Model
+mbSetPlayerName mbPlayerName model =
+    case mbPlayerName of
+        Nothing ->
+            model
+
+        Just playerName ->
+            setPlayerName playerName model
+
+
+setPlayerName : String -> Model -> Model
+setPlayerName playerNameStr model =
+    if playerNameStr == "" then
+        model
+
+    else
+        let
+            newPlayerOneEntity =
+                findEntity model "playerOne"
+                    |> Components.updateAllLgsDisplayName playerNameStr
+
+            newEntities =
+                model.itemsLocationsAndCharacters
+                    |> List.map
+                        (\x ->
+                            if Tuple.first x == "playerOne" then
+                                newPlayerOneEntity
+
+                            else
+                                x
+                        )
+
+            newAnswerBoxModel =
+                AnswerBox.update "" model.answerBoxModel
+
+            newModel =
+                { model
+                    | itemsLocationsAndCharacters = newEntities
+                    , playerName = playerNameStr
+                    , answerBoxModel = newAnswerBoxModel
+                }
+        in
+        newModel
+
+
 
 -- UPDATE
 
@@ -256,30 +302,8 @@ update msg model =
                 StartMainGameNewPlayerName playerNameStr ->
                     if playerNameStr /= "" then
                         let
-                            newPlayerOneEntity =
-                                findEntity model "playerOne"
-                                    |> Components.updateAllLgsDisplayName playerNameStr
-
-                            newEntities =
-                                model.itemsLocationsAndCharacters
-                                    |> List.map
-                                        (\x ->
-                                            if Tuple.first x == "playerOne" then
-                                                newPlayerOneEntity
-
-                                            else
-                                                x
-                                        )
-
-                            newAnswerBoxModel =
-                                AnswerBox.update "" model.answerBoxModel
-
                             newModel =
-                                { model
-                                    | itemsLocationsAndCharacters = newEntities
-                                    , playerName = playerNameStr
-                                    , answerBoxModel = newAnswerBoxModel
-                                }
+                                setPlayerName playerNameStr model
                         in
                         update StartMainGame newModel
 
