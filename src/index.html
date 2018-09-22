@@ -39,7 +39,7 @@
 
     elmApp.ports.sendRequestForStoredHistory.subscribe(function(data) {
        var storedState = localStorage.getItem( historyStr );
-       var storedHistory = storedState ? JSON.parse(storedState) : ( { "playerName" : "" ,  "lInteractions" : new Array() } ) ;
+       var storedHistory = storedState ? JSON.parse(storedState) : ( { "playerName" : "" ,  "lInteractions" : new Array() ,  "lPrandomFloats" : new Array()} ) ;
        elmApp.ports.getHistoryFromStorage.send(storedHistory)
    });
 

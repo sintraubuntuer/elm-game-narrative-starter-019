@@ -40,7 +40,7 @@ type Msg
     | ToggleShowHideSaveLoadBtns
     | SaveHistory
     | RequestForStoredHistory
-    | LoadHistory { playerName : String, lInteractions : List SaveHistoryRecord }
+    | LoadHistory { playerName : String, lInteractions : List SaveHistoryRecord, lPrandomFloats : List Float }
     | ProcessLoadHistory (List ( String, InteractionExtraInfo )) SettingsModel
     | ExitToFinalScreen
     | Loaded

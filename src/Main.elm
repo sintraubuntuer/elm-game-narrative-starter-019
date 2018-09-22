@@ -94,6 +94,7 @@ type alias Model =
     , languageStoryLines : Dict String (List StorySnippet)
     , languageNarrativeContents : Dict String (Dict String (ListZipper.Zipper String))
     , languageAudioContents : Dict String (Dict String ClientTypes.AudioFileInfo)
+    , lallgeneretedRandomFloats : List Float
     , displayStartScreen : Bool
     , startScreenInfo : StartScreenInfo
     , displayEndScreen : Bool
@@ -108,6 +109,11 @@ getInteractableInfo interactableEntity =
 
 init : Flags -> ( Model, Cmd ClientTypes.Msg )
 init flags =
+    initWithMbPlayerNameAndMbHistoryList flags True [] Nothing []
+
+
+initWithMbPlayerNameAndMbHistoryList : Flags -> Bool -> List Float -> Maybe String -> List ( String, InteractionExtraInfo ) -> ( Model, Cmd ClientTypes.Msg )
+initWithMbPlayerNameAndMbHistoryList flags displayStartScreen_ lPrandomFloats mbPlayerName historyList =
     let
         dictEntities =
             Rules.rules
@@ -134,44 +140,51 @@ init flags =
 
         debugMode_ =
             True
-    in
-    ( { engineModel = engineModel
-      , debugMode = debugMode_
-      , baseImgUrl = flags.baseImgUrl
-      , baseSoundUrl = flags.baseSoundUrl
-      , itemsLocationsAndCharacters = Manifest.items ++ Manifest.locations ++ Manifest.characters
-      , playerName = "___investigator___" -- default
-      , answerBoxModel = answerboxmodel
-      , settingsModel = settingsmodel
-      , mbSentText = Nothing
-      , alertMessages = []
-      , geoLocation = Nothing
-      , geoDistances = []
-      , defaultZoneRadius = 50.0
-      , bkendAnswerStatusDict =
-            (Manifest.items ++ Manifest.locations ++ Manifest.characters)
-                |> List.map Tuple.first
-                |> List.map (\interactableId -> ( interactableId, EngineTypes.NoInfoYet ))
-                |> Dict.fromList
-      , loaded = True
-      , languageStoryLines = Narrative.startingNarratives
 
-      -- dictionary that associates ruleIds to a dict languageId (narrative : ZipperString)
-      , languageNarrativeContents = Dict.map (\a b -> getLanguagesNarrativeDict ( a, b )) dictEntities
-      , languageAudioContents = Dict.map (\a b -> getLanguagesAudioDict ( a, b )) dictEntities
-      , displayStartScreen = True
-      , startScreenInfo = Narrative.startScreenInfo
-      , displayEndScreen = False
-      , endScreenInfo = Narrative.endScreenInfo
-      }
-    , cmdForGeneratingListOfRandomFloats
-      --Cmd.none
-    )
+        newModel =
+            { engineModel = engineModel
+            , debugMode = debugMode_
+            , baseImgUrl = flags.baseImgUrl
+            , baseSoundUrl = flags.baseSoundUrl
+            , itemsLocationsAndCharacters = Manifest.items ++ Manifest.locations ++ Manifest.characters
+            , playerName = mbPlayerName |> Maybe.withDefault "___investigator___" -- default
+            , answerBoxModel = answerboxmodel
+            , settingsModel = settingsmodel
+            , mbSentText = Nothing
+            , alertMessages = []
+            , geoLocation = Nothing
+            , geoDistances = []
+            , defaultZoneRadius = 50.0
+            , bkendAnswerStatusDict =
+                (Manifest.items ++ Manifest.locations ++ Manifest.characters)
+                    |> List.map Tuple.first
+                    |> List.map (\interactableId -> ( interactableId, EngineTypes.NoInfoYet ))
+                    |> Dict.fromList
+            , loaded = True
+            , languageStoryLines = Narrative.startingNarratives
+
+            -- dictionary that associates ruleIds to a dict languageId (narrative : ZipperString)
+            , languageNarrativeContents = Dict.map (\a b -> getLanguagesNarrativeDict ( a, b )) dictEntities
+            , languageAudioContents = Dict.map (\a b -> getLanguagesAudioDict ( a, b )) dictEntities
+            , lallgeneretedRandomFloats = []
+            , displayStartScreen = displayStartScreen_
+            , startScreenInfo = Narrative.startScreenInfo
+            , displayEndScreen = False
+            , endScreenInfo = Narrative.endScreenInfo
+            }
+    in
+    if List.length historyList == 0 then
+        ( newModel, cmdForGeneratingListOfRandomFloats )
+        --Cmd.none
+
+    else
+        getNewModelAfterGameStartRandomElems lPrandomFloats newModel
+            |> update (ProcessLoadHistory historyList newModel.settingsModel)
 
 
 cmdForGeneratingListOfRandomFloats : Cmd ClientTypes.Msg
 cmdForGeneratingListOfRandomFloats =
-    Random.generate NewRandomElemsAtGameStart (Random.list 1000 (Random.float 0 1))
+    Random.generate NewRandomElemsAtGameStart (Random.list 100 (Random.float 0 1))
 
 
 getNewModelAfterGameStartRandomElems : List Float -> Model -> Model
@@ -200,9 +213,11 @@ getNewModelAfterGameStartRandomElems lfloats model =
         newModel =
             { model
                 | engineModel = newEngineModel
+                , lallgeneretedRandomFloats = lfloats
                 , alertMessages = model.alertMessages ++ alertMessages_
             }
     in
+    --update (ProcessLoadHistory historyList model.settingsModel) newModel
     newModel
 
 
@@ -223,6 +238,10 @@ update :
     -> Model
     -> ( Model, Cmd ClientTypes.Msg )
 update msg model =
+    let
+        _ =
+            Debug.log "update was called with msg : " msg
+    in
     case Engine.hasFreezingEnd model.engineModel of
         True ->
             -- no-op if story has ended and it has a FreezingType End
@@ -826,6 +845,16 @@ update msg model =
 
                         getAlertMessages3 =
                             [ incidentOnHasEndedConversion, incidentOnGetsuggestedInteraction, incidentOnGetAdditionalTextDict, incidentOnGetAlertMessage2 ]
+
+                        _ =
+                            Debug.log "current location is now  : " (Engine.getCurrentLocation model.engineModel)
+
+                        _ =
+                            Debug.log "characters in current location are  : " (Engine.getCharactersInCurrentLocation newEngineModel)
+
+                        _ =
+                            getExits (Engine.getCurrentLocation model.engineModel |> findEntity model)
+                                |> Debug.log "exits are : "
                     in
                     ( { model
                         | engineModel = newEngineModel --  |> checkEnd
@@ -839,7 +868,11 @@ update msg model =
                     )
 
                 NewRandomElemsAtGameStart lfloats ->
-                    ( getNewModelAfterGameStartRandomElems lfloats model, Cmd.none )
+                    let
+                        newModel =
+                            getNewModelAfterGameStartRandomElems lfloats model
+                    in
+                    ( newModel, Cmd.none )
 
                 NewUserSubmitedText theText ->
                     let
@@ -907,11 +940,14 @@ update msg model =
                         newlist =
                             convertToListIdExtraInfo obj.lInteractions
 
+                        lPrandomFloats =
+                            obj.lPrandomFloats
+
                         savedSettings =
                             Settings.update ClientTypes.SettingsHideExitToFinalScreenButton model.settingsModel
 
                         ( newModel, cmds ) =
-                            init (Flags model.baseImgUrl model.baseSoundUrl)
+                            initWithMbPlayerNameAndMbHistoryList (Flags model.baseImgUrl model.baseSoundUrl) False lPrandomFloats (Just playerName) newlist
 
                         newModel_ =
                             if List.length newlist == 0 then
@@ -919,10 +955,15 @@ update msg model =
 
                             else
                                 { newModel | alertMessages = [] }
+
+                        --( newNewModel, newCmds ) =
+                        --    ( newModel_, cmds )
+                        --        |> updateExtraAndThen update (StartMainGameNewPlayerName playerName)
+                        --        |> updateExtraAndThen update (ProcessLoadHistory newlist savedSettings)
+                        --  _ =
+                        --      Debug.log "after  load history . model current location is now : " (Engine.getCurrentLocation newNewModel.engineModel)
                     in
                     ( newModel_, cmds )
-                        |> updateExtraAndThen update (StartMainGameNewPlayerName playerName)
-                        |> updateExtraAndThen update (ProcessLoadHistory newlist savedSettings)
 
                 ProcessLoadHistory ltups savedSettings ->
                     let
@@ -935,6 +976,9 @@ update msg model =
                                     ( model, Cmd.none )
                                         |> updateExtraAndThen update (InteractStepTwo (Tuple.first head) (Tuple.second head))
                                         |> updateExtraAndThen update (ProcessLoadHistory rest savedSettings)
+
+                        _ =
+                            Debug.log "processing load history . model current location is now : " (Engine.getCurrentLocation newModel.engineModel)
                     in
                     ( { newModel | settingsModel = savedSettings }, cmds )
 
@@ -949,7 +993,7 @@ update msg model =
 
 {-| this is taken from ccapndave/elm-update-extra package while not yet upgraded to Elm 0.19 version
 -}
-updateExtraAndThen : (msg -> model -> ( model, Cmd a )) -> msg -> ( model, Cmd a ) -> ( model, Cmd a )
+updateExtraAndThen : (msg -> Model -> ( Model, Cmd a )) -> msg -> ( Model, Cmd a ) -> ( Model, Cmd a )
 updateExtraAndThen updatefunc msg ( model, cmd ) =
     let
         ( model_, cmd_ ) =
@@ -968,13 +1012,13 @@ regexUserReplace userRegex replacer string =
             Regex.replace regex replacer string
 
 
-port saveHistoryToStorage : { playerName : String, lInteractions : List SaveHistoryRecord } -> Cmd msg
+port saveHistoryToStorage : { playerName : String, lInteractions : List SaveHistoryRecord, lPrandomFloats : List Float } -> Cmd msg
 
 
 port sendRequestForStoredHistory : String -> Cmd msg
 
 
-port getHistoryFromStorage : ({ playerName : String, lInteractions : List SaveHistoryRecord } -> msg) -> Sub msg
+port getHistoryFromStorage : ({ playerName : String, lInteractions : List SaveHistoryRecord, lPrandomFloats : List Float } -> msg) -> Sub msg
 
 
 port sendRequestForGeolocation : String -> Cmd msg
@@ -1042,7 +1086,10 @@ saveHistoryToStorageHelper model =
                 storyHistory
 
         infoToSave =
-            { playerName = getInLanguage model.settingsModel.displayLanguage model.playerName, lInteractions = lToSave }
+            { playerName = getInLanguage model.settingsModel.displayLanguage model.playerName
+            , lInteractions = lToSave
+            , lPrandomFloats = model.lallgeneretedRandomFloats
+            }
     in
     ( model, saveHistoryToStorage infoToSave )
 
@@ -1214,7 +1261,10 @@ viewMainGame :
 viewMainGame model =
     let
         currentLocation =
-            Engine.getCurrentLocation model.engineModel |> findEntity model
+            Engine.getCurrentLocation model.engineModel
+                |> Debug.log "current location string in view is : "
+                |> findEntity model
+                |> Debug.log "current location in view is : "
 
         theStoryLine =
             Dict.get model.settingsModel.displayLanguage model.languageStoryLines
@@ -1247,6 +1297,7 @@ viewMainGame model =
                     |> List.map (findEntity model)
             , exits =
                 getExits currentLocation
+                    |> Debug.log "exits in view are : "
                     |> List.map
                         (\( direction, id ) ->
                             ( direction, findEntity model id )

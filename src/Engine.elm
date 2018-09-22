@@ -615,7 +615,7 @@ replaceCheckIfAnswerCorrectUsingBackend bkendAnsStatus strUrl cAnswerData intera
                         cAnswerData.lotherInterAttrs
 
                 newCheckAnswerDataIfSuccess =
-                    { checkAnswerDataRec | lnewAttrs = cAnswerData.lnewAttrs ++ [ ( "bonusText", ADictStringString (List.map (\x -> ( x.lgId, x.text )) answerinfo.secretTextList |> Dict.fromList) ) ] }
+                    { checkAnswerDataRec | lnewAttrs = cAnswerData.lnewAttrs ++ [ ( "bonusText", ADictStringListString (List.map (\x -> ( x.lgId, [ x.text ] )) answerinfo.secretTextList |> Dict.fromList) ) ] }
 
                 newCheckAnswerDataIfInsuccess =
                     checkAnswerDataRec
