@@ -284,10 +284,6 @@ update :
     -> Model
     -> ( Model, Cmd ClientTypes.Msg )
 update msg model =
-    let
-        _ =
-            Debug.log "update was called with msg : " msg
-    in
     case Engine.hasFreezingEnd model.engineModel of
         True ->
             -- no-op if story has ended and it has a FreezingType End
@@ -869,16 +865,6 @@ update msg model =
 
                         getAlertMessages3 =
                             [ incidentOnHasEndedConversion, incidentOnGetsuggestedInteraction, incidentOnGetAdditionalTextDict, incidentOnGetAlertMessage2 ]
-
-                        _ =
-                            Debug.log "current location is now  : " (Engine.getCurrentLocation model.engineModel)
-
-                        _ =
-                            Debug.log "characters in current location are  : " (Engine.getCharactersInCurrentLocation newEngineModel)
-
-                        _ =
-                            getExits (Engine.getCurrentLocation model.engineModel |> findEntity model)
-                                |> Debug.log "exits are : "
                     in
                     ( { model
                         | engineModel = newEngineModel --  |> checkEnd
@@ -979,13 +965,6 @@ update msg model =
 
                             else
                                 { newModel | alertMessages = [] }
-
-                        --( newNewModel, newCmds ) =
-                        --    ( newModel_, cmds )
-                        --        |> updateExtraAndThen update (StartMainGameNewPlayerName playerName)
-                        --        |> updateExtraAndThen update (ProcessLoadHistory newlist savedSettings)
-                        --  _ =
-                        --      Debug.log "after  load history . model current location is now : " (Engine.getCurrentLocation newNewModel.engineModel)
                     in
                     ( newModel_, cmds )
 
@@ -1000,9 +979,6 @@ update msg model =
                                     ( model, Cmd.none )
                                         |> updateExtraAndThen update (InteractStepTwo (Tuple.first head) (Tuple.second head))
                                         |> updateExtraAndThen update (ProcessLoadHistory rest savedSettings)
-
-                        _ =
-                            Debug.log "processing load history . model current location is now : " (Engine.getCurrentLocation newModel.engineModel)
                     in
                     ( { newModel | settingsModel = savedSettings }, cmds )
 
@@ -1286,9 +1262,7 @@ viewMainGame model =
     let
         currentLocation =
             Engine.getCurrentLocation model.engineModel
-                |> Debug.log "current location string in view is : "
                 |> findEntity model
-                |> Debug.log "current location in view is : "
 
         theStoryLine =
             Dict.get model.settingsModel.displayLanguage model.languageStoryLines
@@ -1321,7 +1295,6 @@ viewMainGame model =
                     |> List.map (findEntity model)
             , exits =
                 getExits currentLocation
-                    |> Debug.log "exits in view are : "
                     |> List.map
                         (\( direction, id ) ->
                             ( direction, findEntity model id )
