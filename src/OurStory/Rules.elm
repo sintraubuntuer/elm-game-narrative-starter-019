@@ -82,7 +82,7 @@ startingState =
 
 startingStateQuasiChanges : List Engine.QuasiChangeWorldCommand
 startingStateQuasiChanges =
-    [ execute_CustomFuncUsingRandomElems 5 (\einfo lfloats manifest -> [ setAttributeValue (astring "niceone") "typeOfPlayer" "playerOne" ]) "playerOne" ]
+    []
 
 
 moveQuestionsToStagesFixed : List Engine.ChangeWorldCommand
