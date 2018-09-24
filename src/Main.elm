@@ -886,9 +886,6 @@ update msg model =
 
                 FillRandomElemsList lfloats ->
                     let
-                        _ =
-                            Debug.log "going to fill random elems list with some nr of new elements : " (List.length lfloats)
-
                         newEngineModel =
                             Engine.addToRandomElemsList lfloats model.engineModel
 
