@@ -36,7 +36,7 @@
      L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mymap);
 
     var elmApp = Elm.Main.init({ node: document.getElementById('outputArea')
-                                  , flags : { "baseImgUrl" : ""
+                                  , flags : {   "baseImgUrl" : ""
                                               , "baseSoundUrl" : "sound/"
                                             }
                                }
@@ -88,17 +88,17 @@
 
 
       var myIcon = L.icon({
-          iconUrl: './img/mapmarker.png',
+          iconUrl: './img/markers/mapmarker.png',
           iconSize: [32, 32],
       });
 
       var myIconCurrent = L.icon({
-          iconUrl: './img/mapmarker_currentStage.png',
+          iconUrl: './img/markers/mapmarker_currentStage.png',
           iconSize: [32, 32],
       });
 
       var myIconPlayer = L.icon({
-          iconUrl: './img/mapmarker_player.png',
+          iconUrl: './img/markers/mapmarker_player.png',
           iconSize: [32, 32],
       });
 
@@ -129,7 +129,7 @@
 
           markerArray.push(thePlayerMarker) ;
           thePlayerMarker.addTo(mymap);
-      })
+      }) ;
 
 
 
