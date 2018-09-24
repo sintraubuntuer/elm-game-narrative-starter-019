@@ -42,6 +42,8 @@ import InfoForBkendApiRequests
 import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
+import Leaflet.Ports
+import Leaflet.Types as TLeaflet
 import List.Zipper as ListZipper
 import OurStory.Manifest as Manifest
 import OurStory.Narrative as Narrative
@@ -63,6 +65,7 @@ import TypesUpdateHelper exposing (updateNestedBkAnsStatus, updateNestedMbInputT
 
 
 
+-- import Leaflet.Types as TLeaflet exposing (LatLng, ZoomPanOptions, defaultZoomPanOptions)
 --import Update.Extra
 
 
@@ -86,7 +89,7 @@ type alias Model =
     , settingsModel : Settings.Model
     , mbSentText : Maybe String
     , alertMessages : List String
-    , geoLocation : Maybe GpsUtils.GeolocationInfo
+    , mbGeoLocation : Maybe GpsUtils.GeolocationInfo
     , geoDistances : List ( String, Float )
     , defaultZoneRadius : Float
     , bkendAnswerStatusDict : Dict String EngineTypes.BackendAnswerStatus
@@ -97,6 +100,8 @@ type alias Model =
     , randomElemsListDesiredSize : Int
     , lallgeneretedRandomFloats : List Float
     , bLoadHistoryMode : Bool
+    , mapZoomNumber : Int
+    , mapZoomPanOptions : TLeaflet.ZoomPanOptions
     , displayStartScreen : Bool
     , startScreenInfo : StartScreenInfo
     , displayEndScreen : Bool
@@ -154,7 +159,7 @@ initWithMbPlayerNameAndMbHistoryList flags displayStartScreen_ lPrandomFloats mb
             , settingsModel = settingsmodel
             , mbSentText = Nothing
             , alertMessages = []
-            , geoLocation = Nothing
+            , mbGeoLocation = Nothing
             , geoDistances = []
             , defaultZoneRadius = 50.0
             , bkendAnswerStatusDict =
@@ -171,6 +176,8 @@ initWithMbPlayerNameAndMbHistoryList flags displayStartScreen_ lPrandomFloats mb
             , randomElemsListDesiredSize = 100
             , lallgeneretedRandomFloats = []
             , bLoadHistoryMode = False
+            , mapZoomNumber = 21
+            , mapZoomPanOptions = TLeaflet.defaultZoomPanOptions
             , displayStartScreen = displayStartScreen_
             , startScreenInfo = Narrative.startScreenInfo
             , displayEndScreen = False
@@ -392,7 +399,7 @@ update msg model =
 
                             newModel =
                                 { model
-                                    | geoLocation = Just location
+                                    | mbGeoLocation = Just location
                                     , geoDistances = distanceToClosestLocations
                                 }
 
@@ -409,7 +416,7 @@ update msg model =
                     let
                         newModel =
                             { model
-                                | geoLocation = Nothing
+                                | mbGeoLocation = Nothing
                                 , geoDistances = []
                                 , alertMessages = [ "Failed to get gps coordinates" ]
                             }
@@ -866,6 +873,36 @@ update msg model =
                             else
                                 newSettingsModel
 
+                        exitsNamesAndCoords =
+                            Engine.getCurrentLocation model.engineModel
+                                |> findEntity model
+                                |> Components.getExits
+                                |> List.map (\( direction, id ) -> id)
+                                |> List.map (\id -> findEntity model id)
+                                |> List.map (getDictLgNamesAndCoords Narrative.desiredLanguages)
+                                |> List.map (\dict -> Dict.get model.settingsModel.displayLanguage dict |> Maybe.map (\( name, lat, lng ) -> { stageName = name, coords = ( lat, lng ), marker_type = "connecting" }))
+                                |> List.filterMap (\x -> x)
+
+                        mbCurrentStageNameAndCoords =
+                            Engine.getCurrentLocation model.engineModel
+                                |> findEntity model
+                                |> (\entity -> getDictLgNamesAndCoords Narrative.desiredLanguages entity)
+                                |> (\dict -> Dict.get model.settingsModel.displayLanguage dict |> Maybe.map (\( name, lat, lng ) -> { stageName = name, coords = ( lat, lng ), marker_type = "current" }))
+
+                        currentStageNameAndCoordsList =
+                            mbCurrentStageNameAndCoords |> Maybe.map (\x -> [ x ]) |> Maybe.withDefault []
+
+                        lPortCmds : List (Cmd msg)
+                        lPortCmds =
+                            [ Leaflet.Ports.filterMarkersCmdPort { stageMarkerInfo = exitsNamesAndCoords ++ currentStageNameAndCoordsList, playerCoords = model.mbGeoLocation |> Maybe.map (\rec -> ( rec.latitude, rec.longitude )) |> Maybe.withDefault ( 0, 0 ) }
+                            , case mbCurrentStageNameAndCoords of
+                                Just currInfo ->
+                                    Leaflet.Ports.setView ( currInfo.coords, model.mapZoomNumber, model.mapZoomPanOptions )
+
+                                Nothing ->
+                                    Cmd.none
+                            ]
+
                         getAlertMessages3 =
                             [ incidentOnHasEndedConversion, incidentOnGetsuggestedInteraction, incidentOnGetAdditionalTextDict, incidentOnGetAlertMessage2 ]
                     in
@@ -878,10 +915,15 @@ update msg model =
                         , settingsModel = newSettingsModel2
                       }
                     , if not model.bLoadHistoryMode && Engine.getRandomElemsListSize newEngineModel < model.randomElemsListDesiredSize then
-                        Random.generate FillRandomElemsList (Random.list (model.randomElemsListDesiredSize - Engine.getRandomElemsListSize newEngineModel) (Random.float 0 1))
+                        Cmd.batch
+                            ([ Random.generate FillRandomElemsList (Random.list (model.randomElemsListDesiredSize - Engine.getRandomElemsListSize newEngineModel) (Random.float 0 1))
+                             ]
+                                ++ lPortCmds
+                            )
 
                       else
-                        Cmd.none
+                        --Cmd.none
+                        Cmd.batch lPortCmds
                     )
 
                 FillRandomElemsList lfloats ->
@@ -1126,7 +1168,7 @@ getExtraInfoFromModel model interactableId =
     InteractionExtraInfo
         model.mbSentText
         model.mbSentText
-        (GpsUtils.getCurrentGeoReportAsText currLocNameAndCoords model.geoLocation model.geoDistances 3)
+        (GpsUtils.getCurrentGeoReportAsText currLocNameAndCoords model.mbGeoLocation model.geoDistances 3)
         currLocationStrId
         (Dict.get interactableId model.bkendAnswerStatusDict |> Maybe.withDefault EngineTypes.NoInfoYet)
         Nothing
@@ -1140,7 +1182,7 @@ updateInterExtraInfoWithGeoInfo extraInforecord model =
     in
     { extraInforecord
         | geolocationInfoText =
-            GpsUtils.getCurrentGeoReportAsText currLocNameAndCoords model.geoLocation model.geoDistances 3
+            GpsUtils.getCurrentGeoReportAsText currLocNameAndCoords model.mbGeoLocation model.geoDistances 3
     }
 
 

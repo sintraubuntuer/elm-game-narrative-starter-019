@@ -10,9 +10,20 @@
       <link rel="stylesheet" type="text/css" href="Theme/styles/github-markdown.css" />
 
     <title>A Guided Tour through ... - An Interactive Story</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.0-rc.3/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.0.0-rc.3/dist/leaflet.js"></script>
+  <style>
+      #mapid { height: 400px; width : 800px; margin : auto ; }
+      /* #mapAndApp { width : 600px; margin : auto ; }
+      */
+  </style>
   </head>
   <body>
-    <div id="outputArea">
+    <div id="mapAndApp">
+
+         <div id="mapid"></div>
+
+         <div id="outputArea"> </div>
     </div>
 
   </body>
@@ -20,9 +31,9 @@
   <!-- <script type="text/javascript" src="compiledjs/guidedTourVilaSassetti.js"></script> -->
   <script type="text/javascript" src="dist/main.js"></script>
   <script type="text/javascript">
-     var node1 = document.getElementById("outputArea") ;
-     //var elmApp = Elm.Main.embed( node1 , {   baseImgUrl : ""
-    //                                        , baseSoundUrl : "sound/"  }  );
+
+     var mymap = L.map('mapid').setView([38.7952, -9.391733 ], 21);
+     L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mymap);
 
     var elmApp = Elm.Main.init({ node: document.getElementById('outputArea')
                                   , flags : { "baseImgUrl" : ""
@@ -70,6 +81,55 @@
              console.log("Unable to retrieve your location") ;
          }
      });
+
+     elmApp.ports.setView.subscribe(function(data){
+          mymap.setView.apply(mymap, data);
+      }) ;
+
+
+      var myIcon = L.icon({
+          iconUrl: './img/mapmarker.png',
+          iconSize: [32, 32],
+      });
+
+      var myIconCurrent = L.icon({
+          iconUrl: './img/mapmarker_currentStage.png',
+          iconSize: [32, 32],
+      });
+
+      var myIconPlayer = L.icon({
+          iconUrl: './img/mapmarker_player.png',
+          iconSize: [32, 32],
+      });
+
+      var markerArray = new Array()
+
+      elmApp.ports.filterMarkersCmdPort.subscribe(function(data){
+
+          markerArray.forEach( function(themarker) {
+              themarker.removeFrom(mymap) ;
+          } ) ;
+
+          var stageMarkerInfo = data.stageMarkerInfo ;
+          stageMarkerInfo.forEach( function(coordsObj) {
+               var coords = coordsObj.coords ;
+               var themarker ;
+               if ( coordsObj.marker_type == "current") {
+                  themarker = L.marker(coords, {icon: myIconCurrent}).bindTooltip(" " + coordsObj.stageName + " ") ;
+               } else {
+                 themarker = L.marker(coords, {icon: myIcon}).bindTooltip(" " + coordsObj.stageName + " ") ;
+               }
+               markerArray.push(themarker) ;
+               themarker.addTo(mymap);
+
+
+          } ) ;
+          // playerMarker
+          var thePlayerMarker = L.marker(data.playerCoords, {icon: myIconPlayer}).bindTooltip(" Player ") ;
+
+          markerArray.push(thePlayerMarker) ;
+          thePlayerMarker.addTo(mymap);
+      })
 
 
 
