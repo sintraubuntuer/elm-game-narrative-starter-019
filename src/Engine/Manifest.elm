@@ -16,7 +16,6 @@ module Engine.Manifest exposing
     , getItemsInLocation
     , getItemsInLocationIncludeWrittenContent
     , getLocations
-    , getReservedAttrIds
     , init
     , isCharacter
     , isItem
@@ -1881,19 +1880,6 @@ setNextChangeWorldCommandsToBeExecuted lcwcmds mbInteractable =
 clearNextChangeWorldCommandsToBeExecuted : Maybe Interactable -> Maybe Interactable
 clearNextChangeWorldCommandsToBeExecuted mbInteractable =
     setNextChangeWorldCommandsToBeExecuted [] mbInteractable
-
-
-getReservedAttrIds : List String
-getReservedAttrIds =
-    [ "playerAnswer"
-    , "isCorrectlyAnswered"
-    , "isIncorrectlyAnswered"
-    , "narrativeHeader"
-
-    --  , "additionalTextDict"
-    , "chosenOption"
-    , "answerOptionsList"
-    ]
 
 
 comparesEqual : String -> String -> Types.AnswerCase -> Types.AnswerSpaces -> Bool
