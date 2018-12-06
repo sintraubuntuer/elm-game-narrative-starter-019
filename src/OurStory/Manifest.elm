@@ -111,22 +111,22 @@ initialLocations =
     ]
 
 
-getStageCoordInfo : Int -> Maybe ( Float, Float, Maybe Float )
+getStageCoordInfo : Int -> Maybe { latitude : Float, longitude : Float, mbRadius : Maybe Float, bRequiredToBeIn : Bool }
 getStageCoordInfo stageNr =
     let
-        dictCoordInfo : Dict Int ( Float, Float, Maybe Float )
+        dictCoordInfo : Dict Int { latitude : Float, longitude : Float, mbRadius : Maybe Float, bRequiredToBeIn : Bool }
         dictCoordInfo =
             Dict.fromList
-                [ ( 1, ( 38.7952, -9.391733, Nothing ) )
-                , ( 2, ( 38.795033, -9.391517, Nothing ) )
-                , ( 3, ( 38.79475, -9.3914, Nothing ) )
-                , ( 4, ( 38.7943, -9.391567, Nothing ) )
-                , ( 5, ( 38.79395, -9.391267, Nothing ) )
-                , ( 6, ( 38.793717, -9.391167, Nothing ) )
-                , ( 7, ( 38.793733, -9.39095, Nothing ) )
-                , ( 8, ( 38.793367, -9.391167, Nothing ) )
-                , ( 9, ( 38.792367, -9.391267, Nothing ) )
-                , ( 10, ( 38.7922, -9.3913, Nothing ) )
+                [ ( 1, { latitude = 38.7952, longitude = -9.391733, mbRadius = Nothing, bRequiredToBeIn = False } )
+                , ( 2, { latitude = 38.795033, longitude = -9.391517, mbRadius = Nothing, bRequiredToBeIn = True } )
+                , ( 3, { latitude = 38.79475, longitude = -9.3914, mbRadius = Nothing, bRequiredToBeIn = True } )
+                , ( 4, { latitude = 38.7943, longitude = -9.391567, mbRadius = Nothing, bRequiredToBeIn = True } )
+                , ( 5, { latitude = 38.79395, longitude = -9.391267, mbRadius = Nothing, bRequiredToBeIn = True } )
+                , ( 6, { latitude = 38.793717, longitude = -9.391167, mbRadius = Nothing, bRequiredToBeIn = True } )
+                , ( 7, { latitude = 38.793733, longitude = -9.39095, mbRadius = Nothing, bRequiredToBeIn = True } )
+                , ( 8, { latitude = 38.793367, longitude = -9.391167, mbRadius = Nothing, bRequiredToBeIn = True } )
+                , ( 9, { latitude = 38.792367, longitude = -9.391267, mbRadius = Nothing, bRequiredToBeIn = True } )
+                , ( 10, { latitude = 38.7922, longitude = -9.3913, mbRadius = Nothing, bRequiredToBeIn = True } )
                 ]
     in
     dictCoordInfo
@@ -139,8 +139,8 @@ getListOfLocations initLocations nrLocations =
         getDirection : Int -> Int -> GpsUtils.Direction
         getDirection s1 s2 =
             case ( getStageCoordInfo s1, getStageCoordInfo s2 ) of
-                ( Just ( lat1, lon1, mbrad1 ), Just ( lat2, lon2, mbrad2 ) ) ->
-                    GpsUtils.calculateBearing ( lat1, lon1 ) ( lat2, lon2 )
+                ( Just coordsRec1, Just coordsRec2 ) ->
+                    GpsUtils.calculateBearing ( coordsRec1.latitude, coordsRec1.longitude ) ( coordsRec2.latitude, coordsRec2.longitude )
                         |> toFloat
                         |> GpsUtils.bearingToDirection
 
@@ -168,9 +168,9 @@ getListOfLocations initLocations nrLocations =
                 Nothing ->
                     entity
 
-                Just ( lat, lon, mbRadius ) ->
+                Just coordsRec ->
                     entity
-                        |> addNeedsToBeInGpsZone True lat lon mbRadius
+                        |> addNeedsToBeInGpsZone coordsRec.bRequiredToBeIn coordsRec.latitude coordsRec.longitude coordsRec.mbRadius
 
         createEntity nr =
             entity (NarrativeDSFuncs.getStageId nr)

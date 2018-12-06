@@ -4,10 +4,10 @@
     <meta charSet="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1 , shrink-to-fit=yes" />
 
-     <link rel="stylesheet" type="text/css" href="Theme/styles/main.css" />
-     <link rel="stylesheet" type="text/css" href="Theme/styles/reset.css" />
-     <link rel="stylesheet" type="text/css" href="Theme/styles/story.css" />
-      <link rel="stylesheet" type="text/css" href="Theme/styles/github-markdown.css" />
+     <link rel="stylesheet" type="text/css" href="src/Theme/styles/main.css" />
+     <link rel="stylesheet" type="text/css" href="src/Theme/styles/reset.css" />
+     <link rel="stylesheet" type="text/css" href="src/Theme/styles/story.css" />
+      <link rel="stylesheet" type="text/css" href="src/Theme/styles/github-markdown.css" />
 
     <title>A Guided Tour through ... - An Interactive Story</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.0-rc.3/dist/leaflet.css" />
@@ -33,7 +33,7 @@
   <script type="text/javascript">
 
      var mymap = L.map('mapid').setView([38.7952, -9.391733 ], 18);
-     L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mymap);
+     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mymap);
 
     var elmApp = Elm.Main.init({ node: document.getElementById('outputArea')
                                   , flags : {   "baseImgUrl" : ""

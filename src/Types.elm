@@ -302,10 +302,10 @@ type ChangeWorldCommand
     | EndStory EndingType String
     | CheckAndActIfChosenOptionIs String (List CheckOptionData) ID
     | ExecuteCustomFunc (InteractionExtraInfo -> Manifest -> List ChangeWorldCommand) InteractionExtraInfo ID
-    | ExecuteCustomFuncUsingRandomElems (InteractionExtraInfo -> List Float -> Manifest -> List ChangeWorldCommand) InteractionExtraInfo (List Float) ID
 
 
 
+--| ExecuteCustomFuncUsingRandomElems (InteractionExtraInfo -> List Float -> Manifest -> List ChangeWorldCommand) InteractionExtraInfo (List Float) ID
 --| ProcessChosenOptionEqualTo CheckOptionData ID
 -- QuasiChangeWorldCommand have an underscore _ .  quasi cwcommmands  come from the config rules
 -- and are the  ones that wont reach Engine.Manifest because they
@@ -319,7 +319,7 @@ type QuasiChangeWorldCommand
     | Write_GpsInfoToItem ID
     | Write_InputTextToItem ID
     | Execute_CustomFunc (InteractionExtraInfo -> Manifest -> List ChangeWorldCommand) ID
-    | Execute_CustomFuncUsingRandomElems Int (InteractionExtraInfo -> List Float -> Manifest -> List ChangeWorldCommand) ID
+    | Execute_CustomFuncUsingRandomElems Int (List Float -> InteractionExtraInfo -> Manifest -> List ChangeWorldCommand) ID
 
 
 type QuasiChangeWorldCommandWithBackendInfo

@@ -146,7 +146,7 @@ initWithMbPlayerNameAndMbHistoryList flags displayStartScreen_ lPrandomFloats mb
             settingsmodel.displayLanguage
 
         debugMode_ =
-            True
+            False
 
         newModel =
             { engineModel = engineModel

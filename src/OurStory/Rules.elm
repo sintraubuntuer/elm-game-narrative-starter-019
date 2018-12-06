@@ -65,7 +65,9 @@ startingState : List Engine.ChangeWorldCommand
 startingState =
     [ moveTo "onceUponAtime"
     , moveCharacterToLocation "playerOne" "onceUponAtime"
-    , moveItemToLocation "gps" "stage1"
+
+    --, moveItemToLocation "gps" "stage1"
+    , moveItemToCharacterInventory "playerOne" "gps"
     , moveItemToLocationFixed "creditsInfo" ("stage" ++ String.fromInt getNumberOfDesiredStages)
     ]
         ++ moveQuestionsToStagesFixed
