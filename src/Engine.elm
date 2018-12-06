@@ -1150,12 +1150,12 @@ increaseCounter =
 
 createAttributeIfNotExists : AttrTypes -> String -> String -> ChangeWorldCommand
 createAttributeIfNotExists val attrId interactableId =
-    CreateAttributeIfNotExists val attrId Nothing interactableId
+    CreateAttributeIfNotExists val attrId interactableId
 
 
 createAttributeIfNotExistsAndOrSetValue : AttrTypes -> String -> String -> ChangeWorldCommand
 createAttributeIfNotExistsAndOrSetValue val attrId interactableId =
-    CreateAttributeIfNotExistsAndOrSetValue val attrId Nothing interactableId
+    CreateAttributeIfNotExistsAndOrSetValue val attrId interactableId
 
 
 createOrSetAttributeValueFromOtherInterAttr : String -> String -> String -> String -> ChangeWorldCommand
@@ -1165,7 +1165,7 @@ createOrSetAttributeValueFromOtherInterAttr =
 
 setAttributeValue : AttrTypes -> String -> String -> ChangeWorldCommand
 setAttributeValue val attrId interactableId =
-    CreateAttributeIfNotExistsAndOrSetValue val attrId Nothing interactableId
+    CreateAttributeIfNotExistsAndOrSetValue val attrId interactableId
 
 
 removeAttributeIfExists : String -> String -> ChangeWorldCommand

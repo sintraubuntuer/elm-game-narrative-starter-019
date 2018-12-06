@@ -549,24 +549,24 @@ update change ( storyRecord, linteractionincidents ) =
             in
             ( { storyRecord | manifest = newManifest }, newIncidents )
 
-        CreateAttributeIfNotExists attrValue attrId mbInternal interactableId ->
+        CreateAttributeIfNotExists attrValue attrId interactableId ->
             let
                 ( newManifest, newIncidents ) =
-                    manifestUpdate interactableId (createAttributeIfNotExists attrValue attrId mbInternal) ( storyRecord.manifest, linteractionincidents )
+                    manifestUpdate interactableId (createAttributeIfNotExists attrValue attrId) ( storyRecord.manifest, linteractionincidents )
             in
             ( { storyRecord | manifest = newManifest }, newIncidents )
 
-        SetAttributeValue attrValue attrId mbInternal interactableId ->
+        SetAttributeValue attrValue attrId interactableId ->
             let
                 ( newManifest, newIncidents ) =
-                    manifestUpdate interactableId (setAttributeValue attrValue attrId mbInternal) ( storyRecord.manifest, linteractionincidents )
+                    manifestUpdate interactableId (setAttributeValue attrValue attrId) ( storyRecord.manifest, linteractionincidents )
             in
             ( { storyRecord | manifest = newManifest }, newIncidents )
 
-        CreateAttributeIfNotExistsAndOrSetValue attrValue attrId mbInternal interactableId ->
+        CreateAttributeIfNotExistsAndOrSetValue attrValue attrId interactableId ->
             let
                 ( newManifest, newIncidents ) =
-                    manifestUpdate interactableId (createAttributeIfNotExistsAndOrSetValue attrValue attrId mbInternal) ( storyRecord.manifest, linteractionincidents )
+                    manifestUpdate interactableId (createAttributeIfNotExistsAndOrSetValue attrValue attrId) ( storyRecord.manifest, linteractionincidents )
             in
             ( { storyRecord | manifest = newManifest }, newIncidents )
 
@@ -634,8 +634,8 @@ update change ( storyRecord, linteractionincidents ) =
 
 createAmultiChoice : Dict String (List ( String, String )) -> Maybe Interactable -> Maybe Interactable
 createAmultiChoice dslss mbInteractable =
-    createAttributeIfNotExistsAndOrSetValue (ADictStringLSS dslss) "answerOptionsList" (Just "internal") mbInteractable
-        |> createAttributeIfNotExistsAndOrSetValue (ADictStringLSS dslss) "answerOptionsListBackup" (Just "internal")
+    createAttributeIfNotExistsAndOrSetValue (ADictStringLSS dslss) "answerOptionsList" mbInteractable
+        |> createAttributeIfNotExistsAndOrSetValue (ADictStringLSS dslss) "answerOptionsListBackup"
         |> removeAttributeIfExists "chosenOption"
 
 
@@ -647,7 +647,7 @@ reactivateMultiChoiceFromBackup mbInteractable =
     in
     case mbAnsOptList of
         Just ansOptList ->
-            createAttributeIfNotExistsAndOrSetValue ansOptList "answerOptionsList" (Just "internal") mbInteractable
+            createAttributeIfNotExistsAndOrSetValue ansOptList "answerOptionsList" mbInteractable
                 |> removeAttributeIfExists "chosenOption"
 
         Nothing ->
@@ -805,42 +805,37 @@ increaseCounter counterId mbinteractable =
             Nothing
 
 
-createAttributeIfNotExists : AttrTypes -> String -> Maybe String -> Maybe Interactable -> Maybe Interactable
-createAttributeIfNotExists initialVal attrId mbInternal mbinteractable =
-    if mbInternal == Nothing && List.member attrId getReservedAttrIds then
-        mbinteractable
-            |> writeInteractionIncident "warning" ("Sorry ! It was not possible to create  attribute. That's a 'reserved' attributeId : " ++ attrId)
+createAttributeIfNotExists : AttrTypes -> String -> Maybe Interactable -> Maybe Interactable
+createAttributeIfNotExists initialVal attrId mbinteractable =
+    let
+        getNewDataRecord : AttrTypes -> String -> { a | attributes : Dict String AttrTypes } -> { a | attributes : Dict String AttrTypes }
+        getNewDataRecord theInitialVal theAttrId dataRecord =
+            let
+                newAttributes =
+                    case Dict.get theAttrId dataRecord.attributes of
+                        Nothing ->
+                            Dict.insert theAttrId theInitialVal dataRecord.attributes
 
-    else
-        let
-            getNewDataRecord : AttrTypes -> String -> { a | attributes : Dict String AttrTypes } -> { a | attributes : Dict String AttrTypes }
-            getNewDataRecord theInitialVal theAttrId dataRecord =
-                let
-                    newAttributes =
-                        case Dict.get theAttrId dataRecord.attributes of
-                            Nothing ->
-                                Dict.insert theAttrId theInitialVal dataRecord.attributes
+                        Just c ->
+                            dataRecord.attributes
 
-                            Just c ->
-                                dataRecord.attributes
+                newDataRecord =
+                    { dataRecord | attributes = newAttributes }
+            in
+            newDataRecord
+    in
+    case mbinteractable of
+        Just (Item idata) ->
+            Just (Item <| getNewDataRecord initialVal attrId idata)
 
-                    newDataRecord =
-                        { dataRecord | attributes = newAttributes }
-                in
-                newDataRecord
-        in
-        case mbinteractable of
-            Just (Item idata) ->
-                Just (Item <| getNewDataRecord initialVal attrId idata)
+        Just (Character cdata) ->
+            Just (Character <| getNewDataRecord initialVal attrId cdata)
 
-            Just (Character cdata) ->
-                Just (Character <| getNewDataRecord initialVal attrId cdata)
+        Just (Location ldata) ->
+            Just (Location <| getNewDataRecord initialVal attrId ldata)
 
-            Just (Location ldata) ->
-                Just (Location <| getNewDataRecord initialVal attrId ldata)
-
-            Nothing ->
-                Nothing
+        Nothing ->
+            Nothing
 
 
 writeInteractionIncident : String -> String -> Maybe Interactable -> Maybe Interactable
@@ -1255,7 +1250,7 @@ checkIfAnswerCorrect questionAns playerAnswer checkAnsData manifest mbinteractab
 
                 otherInterAttribsRelatedCWcmds : List ChangeWorldCommand
                 otherInterAttribsRelatedCWcmds =
-                    List.foldl (\( otherInterId, attrId, attrValue ) y -> CreateAttributeIfNotExistsAndOrSetValue attrValue attrId (Just "internal") otherInterId :: y) [] checkAnsData.lotherInterAttrs
+                    List.foldl (\( otherInterId, attrId, attrValue ) y -> CreateAttributeIfNotExistsAndOrSetValue attrValue attrId otherInterId :: y) [] checkAnsData.lotherInterAttrs
 
                 theMbInteractable =
                     if nrTries > Maybe.withDefault 1000000 mbMaxNrTries then
@@ -1274,20 +1269,20 @@ checkIfAnswerCorrect questionAns playerAnswer checkAnsData manifest mbinteractab
                     else if (List.length theCorrectAnswers > 0 && comparesEqualToAtLeastOne playerAnswer theCorrectAnswers checkAnsData.answerCase checkAnsData.answerSpaces) || bEval then
                         Just (Item { idata | writtenContent = Just ansRight })
                             |> makeItUnanswerable
-                            |> createAttributeIfNotExistsAndOrSetValue (Astring playerAnswer) "playerAnswer" (Just "internal")
-                            |> createAttributeIfNotExistsAndOrSetValue (Abool True) "isCorrectlyAnswered" (Just "internal")
+                            |> createAttributeIfNotExistsAndOrSetValue (Astring playerAnswer) "playerAnswer"
+                            |> createAttributeIfNotExistsAndOrSetValue (Abool True) "isCorrectlyAnswered"
                             |> removeAttributeIfExists "isIncorrectlyAnswered"
-                            |> createAttributeIfNotExistsAndOrSetValue (Astring "___QUESTION_ANSWERED___") "narrativeHeader" (Just "internal")
-                            |> createAttributeIfNotExistsAndOrSetValue (ADictStringListString thesuccessTextDict) "additionalTextDict" (Just "internal")
+                            |> createAttributeIfNotExistsAndOrSetValue (Astring "___QUESTION_ANSWERED___") "narrativeHeader"
+                            |> createAttributeIfNotExistsAndOrSetValue (ADictStringListString thesuccessTextDict) "additionalTextDict"
                             |> createAttributesIfNotExistsAndOrSetValue checkAnsData.lnewAttrs
                             |> setNextChangeWorldCommandsToBeExecuted otherInterAttribsRelatedCWcmds
 
                     else
                         Just (Item { idata | writtenContent = Just (getAnsWrong nrTries mbMaxNrTries) })
-                            |> createAttributeIfNotExistsAndOrSetValue (Astring playerAnswer) "playerAnswer" (Just "internal")
-                            |> createAttributeIfNotExistsAndOrSetValue (Abool True) "isIncorrectlyAnswered" (Just "internal")
+                            |> createAttributeIfNotExistsAndOrSetValue (Astring playerAnswer) "playerAnswer"
+                            |> createAttributeIfNotExistsAndOrSetValue (Abool True) "isIncorrectlyAnswered"
                             |> removeAttributeIfExists "isCorrectlyAnswered"
-                            |> createAttributeIfNotExistsAndOrSetValue (ADictStringListString theInsuccessTextDict) "additionalTextDict" (Just "internal")
+                            |> createAttributeIfNotExistsAndOrSetValue (ADictStringListString theInsuccessTextDict) "additionalTextDict"
                             |> createCounterIfNotExists "nrIncorrectAnswers"
                             |> makeItUnanswarableIfReachedMaxTries mbMaxNrTries nrTries
                             |> increaseCounter "nrIncorrectAnswers"
@@ -1385,24 +1380,23 @@ checkAndActIfChosenOptionIs playerChoice lcOptionData optionId manifest mbintera
                                         generateFeedbackTextDict cOptionData.choiceFeedbackText playerChoice manifest
 
                                     otherInterAttribsRelatedCWcmds =
-                                        List.foldl (\( otherInterId, attrId, attrValue ) y -> CreateAttributeIfNotExistsAndOrSetValue attrValue attrId (Just "internal") otherInterId :: y) [] cOptionData.lotherInterAttrs
+                                        List.foldl (\( otherInterId, attrId, attrValue ) y -> CreateAttributeIfNotExistsAndOrSetValue attrValue attrId otherInterId :: y) [] cOptionData.lotherInterAttrs
                                 in
                                 Just (Item { idata | writtenContent = Just choiceStr })
-                                    |> createAttributeIfNotExistsAndOrSetValue (Astring playerChoice) "chosenOption" (Just "internal")
-                                    |> createAttributeIfNotExistsAndOrSetValue (ADictStringListString theTextDict) "additionalTextDict" (Just "internal")
+                                    |> createAttributeIfNotExistsAndOrSetValue (Astring playerChoice) "chosenOption"
+                                    |> createAttributeIfNotExistsAndOrSetValue (ADictStringListString theTextDict) "additionalTextDict"
                                     |> createAttributesIfNotExistsAndOrSetValue cOptionData.lnewAttrs
                                     |> setNextChangeWorldCommandsToBeExecuted (List.append cOptionData.lnewCWcmds otherInterAttribsRelatedCWcmds)
                                     |> removeAttributeIfExists "answerOptionsList"
                                     |> makeItemUnwritable
                                     |> (\mbinter ->
                                             if isResetPossible == Abool True then
-                                                createAttributeIfNotExistsAndOrSetValue (Astring resetOptionId) "suggestedInteraction" (Just "internal") mbinter
+                                                createAttributeIfNotExistsAndOrSetValue (Astring resetOptionId) "suggestedInteraction" mbinter
 
                                             else
                                                 mbinter
                                        )
 
-                            --|> setAttributeValue (aDictStringString Narrative.suggestedDeletedChoiceCaptionDict) "suggestedInteractionCaption" (Just "internal")
                             Nothing ->
                                 mbinteractable
 
@@ -1738,48 +1732,43 @@ attrValueIsEqualTo attrValue attrId interactableId manifest =
 
 {-| sets attribute value only if attribute was previously created
 -}
-setAttributeValue : AttrTypes -> String -> Maybe String -> Maybe Interactable -> Maybe Interactable
-setAttributeValue attrValue attrId mbInternal mbinteractable =
-    if mbInternal == Nothing && List.member attrId getReservedAttrIds then
-        mbinteractable
-            |> writeInteractionIncident "warning" ("Sorry ! It was not possible to  set attribute value . That's a 'reserved' attributeId : " ++ attrId)
+setAttributeValue : AttrTypes -> String -> Maybe Interactable -> Maybe Interactable
+setAttributeValue attrValue attrId mbinteractable =
+    let
+        getNewDataRecord : AttrTypes -> String -> { a | attributes : Dict String AttrTypes } -> { a | attributes : Dict String AttrTypes }
+        getNewDataRecord theattrValue theattrId dataRecord =
+            let
+                newAttributes =
+                    case Dict.get theattrId dataRecord.attributes of
+                        Nothing ->
+                            dataRecord.attributes
 
-    else
-        let
-            getNewDataRecord : AttrTypes -> String -> { a | attributes : Dict String AttrTypes } -> { a | attributes : Dict String AttrTypes }
-            getNewDataRecord theattrValue theattrId dataRecord =
-                let
-                    newAttributes =
-                        case Dict.get theattrId dataRecord.attributes of
-                            Nothing ->
-                                dataRecord.attributes
+                        Just val ->
+                            Dict.update theattrId (\_ -> Just theattrValue) dataRecord.attributes
 
-                            Just val ->
-                                Dict.update theattrId (\_ -> Just theattrValue) dataRecord.attributes
+                newDataRecord =
+                    { dataRecord | attributes = newAttributes }
+            in
+            newDataRecord
+    in
+    case mbinteractable of
+        Just (Item idata) ->
+            Just (Item <| getNewDataRecord attrValue attrId idata)
 
-                    newDataRecord =
-                        { dataRecord | attributes = newAttributes }
-                in
-                newDataRecord
-        in
-        case mbinteractable of
-            Just (Item idata) ->
-                Just (Item <| getNewDataRecord attrValue attrId idata)
+        Just (Character cdata) ->
+            Just (Character <| getNewDataRecord attrValue attrId cdata)
 
-            Just (Character cdata) ->
-                Just (Character <| getNewDataRecord attrValue attrId cdata)
+        Just (Location ldata) ->
+            Just (Location <| getNewDataRecord attrValue attrId ldata)
 
-            Just (Location ldata) ->
-                Just (Location <| getNewDataRecord attrValue attrId ldata)
-
-            Nothing ->
-                Nothing
+        Nothing ->
+            Nothing
 
 
-createAttributeIfNotExistsAndOrSetValue : AttrTypes -> String -> Maybe String -> Maybe Interactable -> Maybe Interactable
-createAttributeIfNotExistsAndOrSetValue theVal attrId mbInternal mbinteractable =
-    createAttributeIfNotExists theVal attrId mbInternal mbinteractable
-        |> setAttributeValue theVal attrId mbInternal
+createAttributeIfNotExistsAndOrSetValue : AttrTypes -> String -> Maybe Interactable -> Maybe Interactable
+createAttributeIfNotExistsAndOrSetValue theVal attrId mbinteractable =
+    createAttributeIfNotExists theVal attrId mbinteractable
+        |> setAttributeValue theVal attrId
 
 
 {-| tries to create and or set the value of several attributes on the interactable given by the list of tuples
@@ -1792,7 +1781,7 @@ createAttributesIfNotExistsAndOrSetValue ltupattrs mbinteractable =
             mbinteractable
 
         head :: rest ->
-            createAttributeIfNotExistsAndOrSetValue (Tuple.second head) (Tuple.first head) Nothing mbinteractable
+            createAttributeIfNotExistsAndOrSetValue (Tuple.second head) (Tuple.first head) mbinteractable
                 |> createAttributesIfNotExistsAndOrSetValue rest
 
 
@@ -1805,7 +1794,7 @@ createOrSetAttributeValueFromOtherInterAttr attrId otherInterAtrrId otherInterId
     -- if the attribute doesnt exist in the other interactable it doesn't create or set any attribute
     case mbAttrVal of
         Just theAttrVal ->
-            createAttributeIfNotExistsAndOrSetValue theAttrVal attrId Nothing mbinteractable
+            createAttributeIfNotExistsAndOrSetValue theAttrVal attrId mbinteractable
 
         Nothing ->
             mbinteractable

@@ -284,9 +284,9 @@ type ChangeWorldCommand
     | ClearWrittenText ID
     | CheckIfAnswerCorrect QuestionAnswer String CheckAnswerData ID
     | CreateCounterIfNotExists String ID --nameIdOfCounter InteractableID
-    | CreateAttributeIfNotExists AttrTypes String (Maybe String) ID -- value nameOfAttributeId  InteractableID
-    | SetAttributeValue AttrTypes String (Maybe String) ID
-    | CreateAttributeIfNotExistsAndOrSetValue AttrTypes String (Maybe String) ID
+    | CreateAttributeIfNotExists AttrTypes String ID -- value nameOfAttributeId  InteractableID
+    | SetAttributeValue AttrTypes String ID
+    | CreateAttributeIfNotExistsAndOrSetValue AttrTypes String ID
     | CreateOrSetAttributeValueFromOtherInterAttr String String ID ID -- nameOfAttributeId otherInteractableAttributeId otherInteractableId InteractableID
     | CreateAMultiChoice (Dict String (List ( String, String ))) ID
     | RemoveMultiChoiceOptions ID
@@ -305,8 +305,6 @@ type ChangeWorldCommand
 
 
 
---| ExecuteCustomFuncUsingRandomElems (InteractionExtraInfo -> List Float -> Manifest -> List ChangeWorldCommand) InteractionExtraInfo (List Float) ID
---| ProcessChosenOptionEqualTo CheckOptionData ID
 -- QuasiChangeWorldCommand have an underscore _ .  quasi cwcommmands  come from the config rules
 -- and are the  ones that wont reach Engine.Manifest because they
 -- will get replaced by ChangeWorldCommands -> the version with no underscore in Engine.update
