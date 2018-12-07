@@ -483,11 +483,11 @@ preUpdate interactableId extraInfo ((Model story) as model) =
             List.foldl
                 (\qcwcmdFunc ( lcwcmds, lfloats ) ->
                     case qcwcmdFunc of
-                        FuncThatMightUseRandoms qcmdFunc ->
+                        CurriedCmdThatMightUseRandoms qcmdFunc ->
                             qcmdFunc extraInfo lfloats
                                 |> (\( cwcmd, new_lf ) -> ( List.append lcwcmds [ cwcmd ], new_lf ))
 
-                        FuncNoRandoms qcmdFunc ->
+                        CurriedCmd qcmdFunc ->
                             qcmdFunc extraInfo
                                 |> (\cwcmd -> ( List.append lcwcmds [ cwcmd ], lfloats ))
                 )
@@ -1053,7 +1053,7 @@ writeTextToItem =
 
 write_InputTextToItem : String -> QuasiChangeWorldCommand
 write_InputTextToItem interactableId =
-    FuncNoRandoms (replaceWriteInputTextToItem interactableId)
+    CurriedCmd (replaceWriteInputTextToItem interactableId)
 
 
 clearWrittenText : String -> ChangeWorldCommand
@@ -1071,7 +1071,7 @@ writeForceTextToItemFromGivenItemAttr =
 
 write_GpsInfoToItem : String -> QuasiChangeWorldCommand
 write_GpsInfoToItem interactableId =
-    FuncNoRandoms (replaceWriteGpsInfoToItem interactableId)
+    CurriedCmd (replaceWriteGpsInfoToItem interactableId)
 
 
 {-| function that comes from the Rules config and is gonna be replaced by CheckIfAnswerCorrect in Engine.update
@@ -1081,7 +1081,7 @@ contained in given list string = allowed right answers ( first arg )
 -}
 check_IfAnswerCorrect : QuestionAnswer -> CheckAnswerData -> String -> QuasiChangeWorldCommand
 check_IfAnswerCorrect questAnswers cAnswerData interactableId =
-    FuncNoRandoms (replaceCheckIfAnswerCorrect questAnswers cAnswerData interactableId)
+    CurriedCmd (replaceCheckIfAnswerCorrect questAnswers cAnswerData interactableId)
 
 
 simpleCheck_IfAnswerCorrect : QuestionAnswer -> Maybe Int -> String -> QuasiChangeWorldCommand
@@ -1101,7 +1101,7 @@ simpleCheck_IfAnswerCorrectUsingBackend strUrl mbNrTries interactableId =
 
 checkAndAct_IfChosenOptionIs : List CheckOptionData -> String -> QuasiChangeWorldCommand
 checkAndAct_IfChosenOptionIs lcOptionData itemid =
-    FuncNoRandoms (replaceCheckAndActIfChosenOptionIs lcOptionData itemid)
+    CurriedCmd (replaceCheckAndActIfChosenOptionIs lcOptionData itemid)
 
 
 
@@ -1156,12 +1156,12 @@ removeAttributeIfExists =
 
 execute_CustomFunc : (InteractionExtraInfo -> Manifest -> List ChangeWorldCommand) -> ID -> QuasiChangeWorldCommand
 execute_CustomFunc func interactableId =
-    FuncNoRandoms (replaceExecuteCustumFunc func interactableId)
+    CurriedCmd (replaceExecuteCustumFunc func interactableId)
 
 
 execute_CustomFuncUsingRandomElems : Int -> (List Float -> InteractionExtraInfo -> Manifest -> List ChangeWorldCommand) -> ID -> QuasiChangeWorldCommand
 execute_CustomFuncUsingRandomElems nrRandomElems func interactableId =
-    FuncThatMightUseRandoms (replaceExecuteCustumFuncUsingRandomElems nrRandomElems func interactableId)
+    CurriedCmdThatMightUseRandoms (replaceExecuteCustumFuncUsingRandomElems nrRandomElems func interactableId)
 
 
 {-| Adds a character to a location, or moves a character to a different location (characters can only be in one location at a time, or off-screen). (Use moveTo to move yourself between locations.)

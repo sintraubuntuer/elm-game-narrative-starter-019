@@ -309,8 +309,8 @@ type ChangeWorldCommand
 
 
 type QuasiChangeWorldCommand
-    = FuncNoRandoms (InteractionExtraInfo -> ChangeWorldCommand)
-    | FuncThatMightUseRandoms (InteractionExtraInfo -> List Float -> ( ChangeWorldCommand, List Float ))
+    = CurriedCmd (InteractionExtraInfo -> ChangeWorldCommand)
+    | CurriedCmdThatMightUseRandoms (InteractionExtraInfo -> List Float -> ( ChangeWorldCommand, List Float ))
 
 
 
