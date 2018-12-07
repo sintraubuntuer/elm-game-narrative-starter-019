@@ -481,7 +481,7 @@ update change ( storyRecord, linteractionincidents ) =
             in
             ( { storyRecord | manifest = newManifest }, newIncidents )
 
-        WriteGpsLocInfoToItem theInfoStr id ->
+        WriteGpsLocInfoToItem theInfoStr extraInfo id ->
             let
                 ( newManifest, newIncidents ) =
                     manifestUpdate id (writeGpsLocInfoToItem theInfoStr) ( storyRecord.manifest, linteractionincidents )

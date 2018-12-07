@@ -280,7 +280,7 @@ type ChangeWorldCommand
     | MakeItUnanswerable ID
     | WriteTextToItem String ID
     | WriteForceTextToItemFromGivenItemAttr String ID ID -- nameOfAttributeId GivenInteractableId InteractableId
-    | WriteGpsLocInfoToItem String ID
+    | WriteGpsLocInfoToItem String InteractionExtraInfo ID
     | ClearWrittenText ID
     | CheckIfAnswerCorrect QuestionAnswer String CheckAnswerData ID
     | CreateCounterIfNotExists String ID --nameIdOfCounter InteractableID
@@ -305,19 +305,28 @@ type ChangeWorldCommand
 
 
 
--- QuasiChangeWorldCommand have an underscore _ .  quasi cwcommmands  come from the config rules
--- and are the  ones that wont reach Engine.Manifest because they
--- will get replaced by ChangeWorldCommands -> the version with no underscore in Engine.update
+-- QuasiChangeWorldCommand are reaaly just curried functions
 
 
 type QuasiChangeWorldCommand
-    = NoQuasiChange
-    | Check_IfAnswerCorrect QuestionAnswer CheckAnswerData ID
-    | CheckAndAct_IfChosenOptionIs (List CheckOptionData) ID
-    | Write_GpsInfoToItem ID
-    | Write_InputTextToItem ID
-    | Execute_CustomFunc (InteractionExtraInfo -> Manifest -> List ChangeWorldCommand) ID
-    | Execute_CustomFuncUsingRandomElems Int (List Float -> InteractionExtraInfo -> Manifest -> List ChangeWorldCommand) ID
+    = FuncNoRandoms (InteractionExtraInfo -> ChangeWorldCommand)
+    | FuncThatMightUseRandoms (InteractionExtraInfo -> List Float -> ( ChangeWorldCommand, List Float ))
+
+
+
+-- old QuasiChangeWorldCommand had an underscore _ .  quasi cwcommmands  come from the config rules
+-- and are the  ones that wouldnt reach Engine.Manifest because they
+-- would get replaced by ChangeWorldCommands -> the version with no underscore in Engine.update
+{-
+   type QuasiChangeWorldCommand
+       = NoQuasiChange
+       | Check_IfAnswerCorrect QuestionAnswer CheckAnswerData ID
+       | CheckAndAct_IfChosenOptionIs (List CheckOptionData) ID
+       | Write_GpsInfoToItem ID
+       | Write_InputTextToItem ID
+       | Execute_CustomFunc (InteractionExtraInfo -> Manifest -> List ChangeWorldCommand) ID
+       | Execute_CustomFuncUsingRandomElems Int (List Float -> InteractionExtraInfo -> Manifest -> List ChangeWorldCommand) ID
+-}
 
 
 type QuasiChangeWorldCommandWithBackendInfo
